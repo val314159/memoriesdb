@@ -9,7 +9,10 @@ clean::
 	tree -I .git -a . | cat
 
 serve:: bottle.py
-	set -a ; . ./.env ; uv run bottle.py app
+	set -a ; . ./.env ; uv run bottle.py ws
+
+api::
+	set -a ; . ./.env ; uv run api.py
 
 bottle.py:
 	wget bottlepy.org/bottle.py
