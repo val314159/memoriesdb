@@ -8,6 +8,9 @@ clean::
 	find . -name \*~ -o -name .\*~ | xargs rm -fr
 	tree -I .git -a . | cat
 
+serve::
+	set -a ; . ./.env ; python3 bottle.py app
+
 bottle.py:
 	wget bottlepy.org/bottle.py
 
