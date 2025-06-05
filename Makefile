@@ -5,8 +5,13 @@ call:: clean all
 all:: pgvector-restart memories-restart
 
 clean::
+	rm -fr __pycache__
 	find . -name \*~ -o -name .\*~ | xargs rm -fr
-	tree -I .git -a . | cat
+
+realclean:: clean
+	rm -fr .venv
+	tree -I .git -asF . | cat
+
 
 serve:: bottle.py
 	set -a ; . ./.env ; uv run bottle.py ws
