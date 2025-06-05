@@ -7,8 +7,10 @@ CREATE TABLE memories (
   role UUID REFERENCES memories(id),
 --//  role VARCHAR(9), -- if this isn't a history record, could this encode 'point of view'?
 --                   -- does this link into entities?
+--  context_drift BOOLEAN NOT NULL DEFAULT FALSE, -- is context allowed to drift?
+  content_drift BOOLEAN NOT NULL DEFAULT FALSE, -- is context allowed to drift?
   content TEXT,
-  context_drift BOOLEAN NOT NULL DEFAULT FALSE, -- is context allowed to drift?
+  content_embeddings VECTOR(384),
   embeddings VECTOR(384),
   _json JSONB NOT NULL DEFAULT '{}'
 );
