@@ -119,13 +119,13 @@ def get_role_id(_cursor=None):
 
 
 def insert_new_category(name, _json={}, _cursor=None):
-    return insert_new_('category', get_category_id(), _json, _cursor)
+    return insert_new_('category', get_category_id(_cursor), _json, _cursor)
 
 def insert_new_role(name, _json={}, _cursor=None):
-    return insert_new_('role', get_role_id(), name, _json, _cursor)
+    return insert_new_('role', get_role_id(_cursor), name, _json, _cursor)
 
 def insert_new_entity(_type, _json={}, _cursor=None):
-    return insert_new_(_type, get_entity_id(), name, _json, _cursor)
+    return insert_new_(_type, get_entity_id(_cursor), name, _json, _cursor)
 
 def insert_fresh_session(user_id, _json={}, _cursor=None):
     cursor = _cursor or get_cursor()
@@ -166,7 +166,7 @@ def get_previous_session(user_id, session_id, _cursor=None):
 def get_user_id(_cursor=None):
     if user_id:= os.getenv('USER_ID',''):
         return user_id
-    cursor = get_type_by_parent(('user', get_entity_id()),
+    cursor = get_type_by_parent(('user', get_entity_id(_cursor)),
                                 suffix=" ORDER BY id DESC LIMIT 2",
                                 _cursor=_cursor)
     assert(1==cursor.rowcount)
@@ -225,7 +225,7 @@ def _init():
     pass
 
 if __name__=='__main__':
-    _init()
+    #_init()
     
     user_id = get_user_id()
     print("user_id", user_id)
