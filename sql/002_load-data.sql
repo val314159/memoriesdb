@@ -8,12 +8,12 @@ INSERT INTO memories (_type, _parent, id) VALUES (
 ) RETURNING id as sublime_id \gset
 
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'category', :'sublime_id', 'false'
-) RETURNING id as false_cid \gset
+  'category', :'sublime_id', 'category'
+) RETURNING id as category_id \gset
 
---INSERT INTO memories (_type, _parent) VALUES (
---  'false', :'sublime_id'
---) RETURNING id as false_id \gset
+INSERT INTO memories (_type, _parent, content) VALUES (
+  'category', :'category_id', 'falsehoods'
+) RETURNING id as falsehoods_cid \gset
 
 -- do we even NEED a universe?
 -- like, the fact we exist and don't
@@ -28,26 +28,12 @@ INSERT INTO memories (_type, _parent, content) VALUES (
 -- we don't really understand them so they might as well
 -- be "souls".
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'category', :'sublime_id', 'entities'
+  'category', :'category_id', 'entities'
 ) RETURNING id as entities_id \gset
 
---INSERT INTO memories (_type, _parent) VALUES (
---  'entities', :'sublime_id'
---) RETURNING id as entities_id \gset
-
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'category', :'sublime_id', 'roles'
+  'category', :'category_id', 'roles'
 ) RETURNING id as roles_id \gset
-
---INSERT INTO memories (_type, _parent) VALUES (
---  'roles', :'sublime_id'
---) RETURNING id as roles_id \gset
-
--- everything before this is a singleton
--- everything after is not.
-
--- does this mean anything?
--- are concepts singletons?
 
 INSERT INTO memories (_type, _parent, content) VALUES (
   'role', :'roles_id', 'system'
@@ -94,7 +80,7 @@ INSERT INTO memories (_type, _parent, role, content) VALUES (
   'what is 2+2?'
   ) RETURNING id as history_id \gset
 
-INSERT INTO memories (_type, _parent, role, content) VALUES (
-  'history', :'session_id', :'assistant_role_id',
+INSERT INTO memories (_type, _parent, role, _json, content) VALUES (
+  'history', :'session_id', :'assistant_role_id', '{"A":"B"}',
   '4.'
   ) RETURNING id as history_id \gset
