@@ -2,13 +2,14 @@
 -- anything with a sublime parent is itself sublime.
 -- anything NOT sublime exists WITHIN the universe
 
-SELECT uuid_generate_v1mc() as root_id \gset
-INSERT INTO memories (_type, _parent, id) VALUES (
-  'sublime', :'root_id', :'root_id'
-) RETURNING id as sublime_id \gset
+--SELECT uuid_generate_v1mc() as root_id \gset
+--INSERT INTO memories (_type, _parent, id) VALUES (
+--  'sublime', :'root_id', :'root_id'
+--) RETURNING id as sublime_id \gset
 
-INSERT INTO memories (_type, _parent, content) VALUES (
-  'category', :'sublime_id', 'category'
+SELECT uuid_generate_v1mc() as category_id \gset
+INSERT INTO memories (_type, _parent, content, id) VALUES (
+  'category', :'category_id', 'category', :'category_id'
 ) RETURNING id as category_id \gset
 
 INSERT INTO memories (_type, _parent, content) VALUES (
@@ -28,31 +29,33 @@ INSERT INTO memories (_type, _parent, content) VALUES (
 -- we don't really understand them so they might as well
 -- be "souls".
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'category', :'category_id', 'entities'
-) RETURNING id as entities_id \gset
+  'category', :'category_id', 'entity'
+) RETURNING id as entity_id \gset
 
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'category', :'category_id', 'roles'
-) RETURNING id as roles_id \gset
+  'category', :'category_id', 'role'
+) RETURNING id as role_id \gset
 
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'role', :'roles_id', 'system'
+  'role', :'role_id', 'system'
 ) RETURNING id as system_role_id \gset
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'role', :'roles_id', 'assistant'
+  'role', :'role_id', 'assistant'
 ) RETURNING id as assistant_role_id \gset
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'role', :'roles_id', 'user'
+  'role', :'role_id', 'user'
 ) RETURNING id as user_role_id \gset
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'role', :'roles_id', 'tool'
+  'role', :'role_id', 'tool'
 ) RETURNING id as tool_role_id \gset
 INSERT INTO memories (_type, _parent, content) VALUES (
-  'role', :'roles_id', 'toolcall'
+  'role', :'role_id', 'toolcall'
 ) RETURNING id as toolcall_role_id \gset
 
 INSERT INTO memories (_type, _parent) VALUES (
-  'user', :'entities_id'
+  'user', :'entity_id'
+  -- should we add a role here
+  -- maybe a "system__role"?
 ) RETURNING id as user_id \gset
 
 SELECT uuid_generate_v1mc() as session_id \gset

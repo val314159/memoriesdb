@@ -2,7 +2,11 @@ PG=pg15
 
 call:: clean all
 
-all:: pgvector-restart memories-restart
+all:: start
+
+start::   pgvector-start   memories-start
+
+restart:: pgvector-restart memories-restart
 
 clean::
 	rm -fr __pycache__
@@ -12,12 +16,16 @@ realclean:: clean
 	rm -fr .venv
 	tree -I .git -asF . | cat
 
+test:: api
 
-serve:: bottle.py
-	set -a ; . ./.env ; uv run bottle.py ws
+.venv:
+	uv sync
 
-api::
-	set -a ; . ./.env ; uv run api.py
+serve:: .venv bottle.py
+	set -a ; . ./.env ; PYTHONPATH=.. uv run bottle.py ws
+
+api::   .venv
+	set -a ; . ./.env ; PYTHONPATH=.. uv run api.py
 
 bottle.py:
 	wget bottlepy.org/bottle.py

@@ -14,6 +14,7 @@ def _():
 
 @app.get ('/api/session/<session_id>')
 def _(session_id):
+    '''returns info about a session'''
     raise Exception('this should return the session info, '
                     'not the chat message history')
 
@@ -30,7 +31,7 @@ def _(session_id):
     return dict(result=result)
 
 
-@app.post('/api/history/<session_id>')
+@app.get ('/api/history/<session_id>')
 def _(session_id):
     result = []
     for row in load_full_session(session_id):
@@ -39,6 +40,21 @@ def _(session_id):
         print(f"J{j};")
         pass
     return dict(result=result)
+
+
+@app.get ('/api/history/')
+def _():
+    session_id = get_latest_session(get_user_id())
+    result = ['[']
+    for row in load_full_session(session_id):
+        j = row2dict(row)
+        result.append('""]\n'])
+        result.extend([json.dumps(j), ',\n'])
+        result.append('""]\n'])
+    else:
+        result.append('""]\n'])
+        pass
+    return result
 
 
 @app.get ('/')
