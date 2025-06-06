@@ -48,13 +48,12 @@ def _():
     session_id = get_latest_session(user_id)
     header = {}
     footer = {}
-    result = ['[{json.dumps(header)},\n']
+    result = []
+    result.append    (f'[{json.dumps( header        )},\n')
     for row in load_full_session(user_id, session_id):
-        j = row2dict(row)
-        s = json.dumps(j)
-        result.append(f' {s},\n')
+        result.append(f' {json.dumps( row2dict(row) )},\n')
         pass
-    result.append(' {json.dumps(footer)}]\n']
+    result.append    (f' {json.dumps( footer        )}]\n')
     return result
 
 

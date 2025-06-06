@@ -1,10 +1,11 @@
 [project]
 name = "memoriesdb"
-version = "0.1.0"
+version = "0.1.1"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
+    "bottle-dev",
     "pgvector>=0.4.1",
     "psycopg2-binary>=2.9.10",
 ]

@@ -4,6 +4,8 @@ call:: clean all
 
 all:: start
 
+stop::    pgvector-stop    memories-stop
+
 start::   pgvector-start   memories-start
 
 restart:: pgvector-restart memories-restart
@@ -33,10 +35,9 @@ bottle.py:
 db::
 	set -a ; . ./.env ; bash -c "psql postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost/$$POSTGRES_DB"
 
-V=--rm --env-file=.env -v`pwd`/sql:/docker-entrypoint-initdb.d -p5432:5432 \
-	--name pgvector pgvector/pgvector:0.8.0-${PG}
-M=--rm --env-file=.env --network=host \
-	--name memories memories
+V=--rm --env-file=.env -v`pwd`/sql:/docker-entrypoint-initdb.d \
+	-p5432:5432 --name pgvector pgvector/pgvector:0.8.0-${PG}
+M=--rm --env-file=.env --network=host --name memories memories
 pgvector-restart:: pgvector-stop pgvector-start
 memories-restart:: memories-stop memories-start
 pgvector-stop::
@@ -49,6 +50,7 @@ memories-stop::
 	docker rm -f memories
 memories-start::
 	docker build   .   --tag memories
+	docker run  -it $M
 	docker run  -d $M
 memories-run::
 	docker build   .   --tag memories
