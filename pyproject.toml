@@ -5,7 +5,9 @@ description = "Thanks for the memories!"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "bottle-dev",
+    "bottle-dev>=0.13",
+    "bottle-websocket>=0.2.9",
+    "gevent-websocket>=0.10.1",
     "pgvector>=0.4.1",
     "psycopg2-binary>=2.9.10",
 ]
