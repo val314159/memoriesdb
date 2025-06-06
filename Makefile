@@ -11,11 +11,12 @@ start::   pgvector-start   memories-start
 restart:: pgvector-restart memories-restart
 
 clean::
-	rm -fr __pycache__
-	find . -name \*~ -o -name .\*~ | xargs rm -fr
+	@find . -name \*~ -o -name .\*~ | xargs rm -fr
+	@find . -name __pycache__ -o -name dist | xargs rm -fr
 
 realclean:: clean
-	rm -fr .venv
+	@find . -name \#*\# -o -name .\#* | xargs rm -fr
+	@rm -fr .venv bottle.py
 	tree -I .git -asF . | cat
 
 test:: api
