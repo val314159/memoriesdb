@@ -44,16 +44,17 @@ def _(session_id):
 
 @app.get ('/api/history/')
 def _():
-    session_id = get_latest_session(get_user_id())
-    result = ['[']
-    for row in load_full_session(session_id):
+    user_id = get_user_id()
+    session_id = get_latest_session(user_id)
+    header = {}
+    footer = {}
+    result = ['[{json.dumps(header)},\n']
+    for row in load_full_session(user_id, session_id):
         j = row2dict(row)
-        result.append('""]\n'])
-        result.extend([json.dumps(j), ',\n'])
-        result.append('""]\n'])
-    else:
-        result.append('""]\n'])
+        s = json.dumps(j)
+        result.append(f' {s},\n')
         pass
+    result.append(' {json.dumps(footer)}]\n']
     return result
 
 
