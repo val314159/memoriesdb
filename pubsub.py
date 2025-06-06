@@ -17,11 +17,7 @@ def _(channels):
 
     wsid = hex(id(ws))[:2]
     
-    def send(method, **params):
-        return ws.send(json.dumps(
-            dict(method=method, params=params)))
- 
-    def adduser():
+    def adduser(_):
         for ch in channels.split('/'):
             Channels.setdefault(ch,[])
             Channels[ch].append(ws)
@@ -29,24 +25,27 @@ def _(channels):
             pass
         pass
 
-    def deluser():
+    def deluser(_):
         for ch in channels.split('/'):
             del Channels[ch]
             del Channels[wsid]
             pass
         pass
 
-    def hi_user():
-        send('welcome', ws=wsid)
-        pass
-    
+    def hi_user(_):
+        d = dict( method='welcome',
+                  params=dict( ws=wsid ) )
+        ws.send( json.dumps( dict( d ) ) )
+        
     hi_user()
     adduser()
-    while msg:= ws.receive():
-        for ws2 in Channels.get(ws.receive(), []):
-            ws2.send(msg)
+    while mesg := ws.receive():
+        name = ws.receive()
+        users = _.channels.get(name, [])
+        for ws in users:
+            ws.send(mesg)
             pass
-        pass        
+        pass
     deluser()
 
 
