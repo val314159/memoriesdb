@@ -50,7 +50,7 @@ memories-stop::
 	docker rm -f memories
 memories-start::
 	docker build   .   --tag memories
-	docker run   -d $M
+	docker run  -d $M
 memories-run::
 	docker build   .   --tag memories
 	docker run -it $M
