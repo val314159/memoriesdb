@@ -6,5 +6,5 @@ RUN curl -LlSf astral.sh/uv/install.sh|sh
 WORKDIR /root/memoriesdb
 ADD   . /root/memoriesdb
 RUN /root/.local/bin/uv sync
-CMD ["bash","-c","PYTHONPATH=.. /root/.local/bin/uv run -mbottle ws -b:8080"]
+CMD ["bash","-c","PYTHONPATH=.. /root/.local/bin/uv run -m bottle ws -b:8080"]
 EXPOSE 8080
