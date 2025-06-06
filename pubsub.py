@@ -49,3 +49,42 @@ def _(channels):
         pass        
     deluser()
 
+
+class PS:
+
+    channels = {}
+
+    def __init__(_, ws):
+        _.ws = ws
+        _.wsid = hex(id(ws))[:2]
+        try:
+            _.adduser()
+            _.hi_user()
+            _.loop()
+        finally:
+            _.deluser()
+    
+    def loop(_):
+        while msg:= ws.receive():
+            for ws2 in _.channels.get(ws.receive(), []):
+                ws2.send(msg)
+    
+    def send(_, method, **params):
+        return ws.send(json.dumps(
+            dict(method=method, params=params)))
+ 
+    def hi_user(_):
+        ws.send('welcome', ws=wsid)
+
+    def adduser(_):
+        for ch in _.channels.split('/'):
+            _.channels.setdefault(ch,[])
+            _.channels[ch].append(ws)
+            _.channels[wsid] = ws
+
+    def deluser(_):
+        for ch in _.channels.split('/'):
+            del   _.channels[ch]
+            del   _.channels[wsid]
+
+
