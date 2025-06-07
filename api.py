@@ -190,15 +190,6 @@ def get_latest_session(user_id, _cursor=None):
                                 parms='id,_src', _cursor=_cursor)
     return cursor.fetchone()[0]
 
-def load_partial_session(session_id, _cursor=None):
-    for row in get_type_by_parent(('history', session_id),
-                                  suffix=" ORDER BY id DESC",
-                                  _cursor=_cursor):
-        #print("   PART", row)
-        yield list(row)
-        pass
-    return
-
 def load_full_session(user_id, session_id, _cursor=None):
     for row in get_type2('history','session',
                           suffix=" ORDER BY id DESC",
