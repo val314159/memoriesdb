@@ -50,7 +50,6 @@ def get_type2(type1, type2,
 _memory_db_fields, _lookup_role = None, None
 
 def _get_memory_db_fields(_cursor=None):
-    print("GET MEMORY DB FIELDSZZZZZZZ")
     global _memory_db_fields
     cursor = _cursor or get_cursor()
     cursor.execute("SELECT * FROM memories LIMIT 0")
@@ -65,21 +64,11 @@ def _get_memory_db_fields(_cursor=None):
     ndx['_private'] = [(_.name,n) for n,_ in enumerate(desc)
                        if     _.name.startswith('_')]
     _memory_db_fields = ndx
-    print("MDF", ndx)
     return ndx
 
 def memory_db_fields(n):
     if _memory_db_fields:
         return _memory_db_fields[n]
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
-    print("GET MEMORY DB FIELDS")
     _get_memory_db_fields(get_dbconn().cursor())
     return memory_db_fields(n)
 
@@ -205,7 +194,6 @@ def load_full_session(user_id, session_id, _cursor=None):
     for row in get_type2('history','session',
                           suffix=" ORDER BY id DESC",
                           _cursor=_cursor):
-        print("ROW", row)
         if   row[1] == 'session':
             session_id = row[4]
         elif row[1] == 'history':

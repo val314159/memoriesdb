@@ -13,6 +13,9 @@ import api
 from api import insert_new_history
 
 
+USER = 'userx'
+ASSISTANT = 'assistantx'
+SYSTEM = 'systemx'
 
 SYSTEM_PROMPT='''
 You are a helpful assistant.
@@ -26,49 +29,36 @@ dotenv.load_dotenv()
 
 class Chat:
 
-    
+    def insert_new_history(_, content, role):
+        _.messages.append( dict(role=role, content=content) )
+        return insert_new_history(_.session_id, content, role)
+
     def __init__(_,
                  session_id,
                  model='mistral',
                  system_prompt=SYSTEM_PROMPT):
-        role = 'system'
-        content = system_prompt
-        _.messages = [ dict(role=role, content=content) ]
-        _.model = model
         _.session_id = session_id
-        #insert_new_history(session_id, content, role)
+        _.model = model
+        _.messages = []
         _.load_session(session_id)
         pass
 
     def load_session(_, session_id):
         session = list(load_full_session(user_id, session_id))
-        print(len(session))
-        headers = session.pop(0)
-        footers = session.pop()
-        print("H", headers)
-        print("F", footers)
-        for row in session:
-            j = row2dict(row)
-            print(f"J{j};")
+        messages = []
+        for jrow in (row2dict(row) for row in session):
+            messages.insert(0, dict(
+                content = jrow['content'],
+                role    = jrow['_role']))
             pass
+        _.messages = messages
         pass
     
-    def messages_append(_, **kw):
-        return _.messages.append(kw)
-
-    
-    def chat(_, content, role='user'):
-        
-        _.messages_append(role=role, content=content)    
-        insert_new_history(session_id, content, role)
-        
+    def chat(_, content, role='user'):      
+        _.insert_new_history(content, role)
         ret = ollama.chat(model=_.model, messages=_.messages)
         msg = ret['message']
-        
-        _.messages.append( msg )
-        insert_new_history(session_id,
-                           msg['content'],
-                           msg['role'])
+        _.insert_new_history(msg['content'], msg['role'])
         return msg
     
 

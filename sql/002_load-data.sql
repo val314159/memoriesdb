@@ -65,22 +65,22 @@ INSERT INTO memories (_type, _parent, _src, id) VALUES (
 
 INSERT INTO memories (_type, _parent, role, content) VALUES (
   'history', :'session_id', :'system_role_id',
-  'You are a helpful assistant.'
-  ) RETURNING id as history_id \gset
+  'You are a helpful assistant.  You answer questions quickly and tersely.  Your name is Zelda Yvonne.'
+   ) RETURNING id as history_id \gset
+
+-- fork off a new session
+INSERT INTO memories (_type, _parent, _src) VALUES (
+  'session', :'user_id', :'session_id'
+  ) RETURNING id as session_id \gset
 
 INSERT INTO memories (_type, _parent, role, content) VALUES (
   'history', :'session_id', :'assistant_role_id',
   'Okay.'
   ) RETURNING id as history_id \gset
 
--- fork off a new session
-INSERT INTO memories (_type, _parent, _src) VALUES (
-  'session', :'user_id', :'session_id'
-) RETURNING id as session_id \gset
-
 INSERT INTO memories (_type, _parent, role, content) VALUES (
   'history', :'session_id', :'user_role_id',
-  'what is 2+2?'
+  'what is 2+2?  also, my car is a red dodge charger.'
   ) RETURNING id as history_id \gset
 
 INSERT INTO memories (_type, _parent, role, _json, content) VALUES (
