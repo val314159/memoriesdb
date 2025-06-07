@@ -35,9 +35,23 @@ class Chat:
         content = system_prompt
         _.messages = [ dict(role=role, content=content) ]
         _.model = model
-        insert_new_history(session_id, content, role)
+        _.session_id = session_id
+        #insert_new_history(session_id, content, role)
+        _.load_session(session_id)
         pass
 
+    def load_session(_, session_id):
+        session = list(load_full_session(user_id, session_id))
+        print(len(session))
+        headers = session.pop(0)
+        footers = session.pop()
+        print("H", headers)
+        print("F", footers)
+        for row in session:
+            j = row2dict(row)
+            print(f"J{j};")
+            pass
+        pass
     
     def messages_append(_, **kw):
         return _.messages.append(kw)
@@ -118,6 +132,8 @@ class Chat:
 if __name__ == '__main__':
 
     from api import *
+
+    api._init()
     
     user_id = get_user_id()
     print("user_id", user_id)
