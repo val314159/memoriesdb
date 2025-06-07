@@ -1,6 +1,6 @@
 [project]
 name = "memoriesdb"
-version = "0.2.0-dev"
+version = "0.3.0-dev"
 description = "Thanks for the memories!"
 readme = "README.md"
 requires-python = ">=3.10"
