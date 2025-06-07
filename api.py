@@ -200,45 +200,18 @@ def load_partial_session(session_id, _cursor=None):
     return
 
 def load_full_session(user_id, session_id, _cursor=None):
-    #print("SESSION", session_id)    
     for row in get_type2('history','session',
                           suffix=" ORDER BY id DESC",
                           _cursor=_cursor):
-        #print("R", row)
         if   row[1] == 'session':
-            #print("SESS", row)
             session_id = row[4]
         elif row[1] == 'history':
             if row[2] == session_id:
-                #print("HIST", row)
-                #print("HIST", row)
-                #x = list(row)
                 yield list(row)
-            else:
-                print("hist", row)
-        continue
-        if   row[1] == 'session':
-            print("SESS", row)
-            session_id = row[4]
-        elif row[1] == 'history':
-            if row[2] == session_id:
-                print("HIST", row)
-                x = list(row)
-                yield list(row)
-            else:
-                print("hist", row)
-        else:
-            raise Exception
-        pass
-    return
-    while session_id:
-        print("SESSION", session_id)
-        for row in load_partial_session(session_id):
-            yield list(row)
+                pass
             pass
-        session_id = get_previous_session(user_id, session_id)
-        pass
-    print("END SESSION")
+        continue
+    return
 
 def row2dict(row):
     j = row[-1]
