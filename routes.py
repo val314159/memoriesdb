@@ -49,12 +49,20 @@ def _():
     header = {}
     footer = {}
     result = []
-    result.append    (f'[{json.dumps( header        )},\n')
-    for row in load_full_session(user_id, session_id):
-        result.append(f' {json.dumps( row2dict(row) )},\n')
-        pass
-    result.append    (f' {json.dumps( footer        )}]\n')
-    return result
+    count = 0
+    header['user_id'] = user_id
+    header['session_id'] = session_id
+    result.append        (f'[{json.dumps( header        )},\n')
+    try:
+        for row in load_full_session(user_id, session_id):
+            result.append(f' {json.dumps( row2dict(row) )},\n')
+            count += 1
+            pass
+        footer['count'] = count
+        result.append    (f' {json.dumps( footer        )}]\n')
+        return result
+    except:
+        return ["ok"]
 
 
 @app.get ('/')

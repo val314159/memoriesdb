@@ -4,6 +4,10 @@ call:: clean all
 
 all:: start
 
+chat::
+	@echo YOU MIGHT HAVE TO INSTALL STUFF
+	PYTHONPATH=. uv run examples/chat_ollama.py
+
 stop::    pgvector-stop    memories-stop
 
 start::   pgvector-start   memories-start

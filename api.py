@@ -37,6 +37,16 @@ def get_type_by_parent(args,
     cursor.execute(sql, args)
     return cursor
 
+def get_type2(type1, type2,
+              suffix='',
+              parms='*',
+              _cursor=None):
+    cursor = _cursor or get_cursor()
+    where = "WHERE _type IN (%s,%s)"
+    sql = f"SELECT {parms} FROM memories {where} {suffix}"
+    cursor.execute(sql, (type1, type2))
+    return cursor
+
 _memory_db_fields, _lookup_role = None, None
 
 def _get_memory_db_fields(_cursor=None):
@@ -59,7 +69,7 @@ def _get_memory_db_fields(_cursor=None):
 def memory_db_fields(n):
     if _memory_db_fields:
         return _memory_db_fields[n]
-    _get_memory_db_fields()
+    _get_memory_db_fields(get_dbconn().cursor())
     return memory_db_fields(n)
 
 def _get_lookup_role(_cursor=None):
@@ -154,7 +164,9 @@ def insert_new_history(session_id, content, _role='user',
     cursor.execute("INSERT INTO memories(_type, _parent, role, content, _json)"
                    " VALUES (%s, %s, %s, %s, %s) RETURNING id",
                    ('history', session_id, role, content, json.dumps(_json)))
-    return cursor.fetchone()[0]
+    ret  = cursor.fetchone()[0]
+    cursor.connection.commit()
+    return ret
 
 def get_previous_session(user_id, session_id, _cursor=None):
     cursor = get_type_by_parent(('session', user_id, session_id),
@@ -182,11 +194,43 @@ def load_partial_session(session_id, _cursor=None):
     for row in get_type_by_parent(('history', session_id),
                                   suffix=" ORDER BY id DESC",
                                   _cursor=_cursor):
+        #print("   PART", row)
         yield list(row)
         pass
     return
 
 def load_full_session(user_id, session_id, _cursor=None):
+    #print("SESSION", session_id)    
+    for row in get_type2('history','session',
+                          suffix=" ORDER BY id DESC",
+                          _cursor=_cursor):
+        #print("R", row)
+        if   row[1] == 'session':
+            #print("SESS", row)
+            session_id = row[4]
+        elif row[1] == 'history':
+            if row[2] == session_id:
+                #print("HIST", row)
+                #print("HIST", row)
+                #x = list(row)
+                yield list(row)
+            else:
+                print("hist", row)
+        continue
+        if   row[1] == 'session':
+            print("SESS", row)
+            session_id = row[4]
+        elif row[1] == 'history':
+            if row[2] == session_id:
+                print("HIST", row)
+                x = list(row)
+                yield list(row)
+            else:
+                print("hist", row)
+        else:
+            raise Exception
+        pass
+    return
     while session_id:
         print("SESSION", session_id)
         for row in load_partial_session(session_id):
