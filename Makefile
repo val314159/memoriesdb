@@ -54,3 +54,10 @@ memories-start::
 memories-run::
 	docker build   .   --tag memories
 	docker run -it $M
+
+run-llm::
+	. .venv/bin/activate && PYTHONPATH=. honcho start -f examples/llm.Procfile
+
+chat::
+	. .venv/bin/activate && PYTHONPATH=. python      -um examples.chat
+

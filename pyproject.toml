@@ -5,7 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "bottle-dev",
+    "bottle-dev>=0.13.2",
+    "gevent-websocket>=0.10.1",
+    "honcho>=2.0.0",
+    "ollama>=0.5.1",
     "pgvector>=0.4.1",
     "psycopg2-binary>=2.9.10",
+    "websocket-client>=1.8.0",
 ]
