@@ -114,9 +114,14 @@ class Chat:
       _.send_output(message.content, message.role)
     ### elif not message.content and     message.tool_calls:
     else:
-      assert(not message.content and     message.tool_calls)
-      print("THERE ARE TOOL CALLS (no content)")
-      assert( len(message.tool_calls) == 1)
+      #assert(not message.content and     message.tool_calls)
+      if message.content:
+        print("THIS IS WIERD, SHOULD THIS BE HAPPENING?")
+        print("THERE ARE TOOL CALLS (w/ content)")
+      else:
+        print("THERE ARE TOOL CALLS (no content)")
+        pass
+      assert( len(message.tool_calls) == 1 )
       tool_call = message.tool_calls[0].function
       _.perform_tool_call(tool_call.name, tool_call.arguments)
       pass
