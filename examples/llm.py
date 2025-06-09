@@ -24,16 +24,24 @@ class Chat:
     ws.connect(f'{WS_BASE}?c={IN_CHANNEL}')
     _.ws = ws
     pass
+  def send_output(_, content, role):
+    # send output to Ava
+    print("SAVE RECORD HERE 0", role)
+    _.messages.append(dict(role=role, content=content))
+    return pub(_.ws, OUT_CHANNEL, content, role=role, done=True)
   def append_user(_, user_input):
+    print("SAVE RECORD HERE 1 user")
     _.messages.append(dict(role='user',      content=user_input))
     pass
   def append_tool(_, name, arguments, output):
+    print("SAVE RECORD HERE 2 tool")
     _.messages.append(dict(role='tool',
                            tool_calls=[dict(
                              function=dict(
                                name=name,
                                arguments=arguments,
                              ))]))
+    print("SAVE RECORD HERE 3 tool")
     _.messages.append(dict(role='tool',
                            content=str(output),
                            name=name))
@@ -45,10 +53,6 @@ class Chat:
                        #stream=True,
                        #format='json',
                        )
-  def send_output(_, content, role):
-    # send output to Ava      
-    _.messages.append(dict(role=role, content=content))
-    return pub(_.ws, OUT_CHANNEL, content, role=role, done=True)
   def process_tool_response_message(_, message):
     if not message:
       print("4 NO MESSAGE")
