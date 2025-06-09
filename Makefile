@@ -10,6 +10,9 @@ start::   pgvector-start   memories-start
 
 restart:: pgvector-restart memories-restart
 
+sleep5::
+	sleep 5
+
 clean::
 	rm -fr __pycache__
 	find . -name \*~ -o -name .\*~ | xargs rm -fr

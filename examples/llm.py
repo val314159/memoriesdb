@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from wsutil import *
+from api import *
 import json
+import websocket
 import ollama
 import funcs2 as funcs
 NAME = os.getenv('NAME','llm')
@@ -19,29 +21,35 @@ class Chat:
     pass
   def connect(_):
     '''we do it this way so error don't leave garbage in _.ws'''
-    import websocket
     ws = WebSocket()
     ws.connect(f'{WS_BASE}?c={IN_CHANNEL}')
     _.ws = ws
     pass
   def send_output(_, content, role):
-    # send output to Ava
-    print("SAVE RECORD HERE 0", role)
-    _.messages.append(dict(role=role, content=content))
+    #print("SAVE RECORD HERE 0", role)
+    _id = insert_new_history(session_id, content, role=role)
+    #print("_id", _id)
+    _.messages.append(dict(role=role, content=content))    
     return pub(_.ws, OUT_CHANNEL, content, role=role, done=True)
-  def append_user(_, user_input):
-    print("SAVE RECORD HERE 1 user")
-    _.messages.append(dict(role='user',      content=user_input))
+  def append_user(_, content):
+    #print("SAVE RECORD HERE 1 user")
+    _id = insert_new_history(session_id, content, role='user')
+    #print("_id", _id)
+    _.messages.append(dict(role='user',  content=content))
     pass
   def append_tool(_, name, arguments, output):
-    print("SAVE RECORD HERE 2 tool")
-    _.messages.append(dict(role='tool',
-                           tool_calls=[dict(
-                             function=dict(
-                               name=name,
-                               arguments=arguments,
-                             ))]))
-    print("SAVE RECORD HERE 3 tool")
+    #print("SAVE RECORD HERE 2 tool")
+    fn_dict = dict(name=name, arguments=arguments)
+    tool_calls = [ dict(function=fn_dict) ]
+    _id = insert_new_history( session_id,
+                              content  =  json.dumps( tool_calls ),
+                              role='tool',
+                              _json={"action":"toolcall"})
+    #print("_id", _id)
+    _.messages.append(  dict( role='tool', tool_calls=tool_calls )  )
+    #print("SAVE RECORD HERE 3 tool")
+    _id = insert_new_history(session_id, output, role='tool', _json={"action":"toolreturn"})
+    #print("_id", _id)
     _.messages.append(dict(role='tool',
                            content=str(output),
                            name=name))
@@ -151,5 +159,15 @@ class Chat:
       pass
     return print("EOF")
   pass
+
 if __name__=='__main__':
+  init()
+
+  user_id = get_user_id()
+  print("user_id", user_id)
+
+  session_id = get_latest_session(user_id)
+  print("session_id", session_id)
+
   Chat().main()
+  

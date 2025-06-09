@@ -147,14 +147,21 @@ def insert_new_session(user_id, previous=None, _json={}, _cursor=None):
         if old_session_id else \
            insert_fresh_session(user_id,           _json, _cursor)
 
-def insert_new_history(session_id, content, _role='user',
-                       _json={}, _cursor=None):
+def insert_new_history(session_id, content, role='user',
+                       _json={}, _cursor=None, _commit=True, **kw):
+    jd = {}
+    jd.update(_json)
+    jd.update(kw)
     cursor = _cursor or get_cursor()
-    role = lookup_role(_role)
+    role = lookup_role(role)
     cursor.execute("INSERT INTO memories(_type, _parent, role, content, _json)"
                    " VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                   ('history', session_id, role, content, json.dumps(_json)))
-    return cursor.fetchone()[0]
+                   ('history', session_id, role, content, json.dumps(jd)))
+    ret = cursor.fetchone()[0]
+    if _commit:
+        cursor.connection.commit()
+        pass
+    return ret
 
 def get_previous_session(user_id, session_id, _cursor=None):
     cursor = get_type_by_parent(('session', user_id, session_id),
@@ -211,7 +218,7 @@ def row2dict(row):
         pass
     return j
 
-def _init():
+def init():
     print(">> Initializing API...")
     _get_memory_db_fields()
     _get_lookup_role()
@@ -224,8 +231,11 @@ def _init():
         role_category_id()
     pass
 
+#_init = init
+
+
 if __name__=='__main__':
-    #_init()
+    init()
     
     user_id = get_user_id()
     print("user_id", user_id)
