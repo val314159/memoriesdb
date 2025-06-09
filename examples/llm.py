@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from wsutil import *
-import time
 import json
 import ollama
 import funcs2 as funcs
@@ -21,17 +20,11 @@ class Chat:
   def connect(_):
     '''we do it this way so error don't leave garbage in _.ws'''
     import websocket
-    print("QQQ1", websocket.WebSocket)
-    print("QQQ1", WebSocket)
     ws = WebSocket()
-    print("QQQ2")
     ws.connect(f'{WS_BASE}?c={IN_CHANNEL}')
     _.ws = ws
     pass
-  def append_user(_, user_input, output=''):
-    if output:
-      _.messages.append(dict(role='assistant', content=output))
-      pass
+  def append_user(_, user_input):
     _.messages.append(dict(role='user',      content=user_input))
     pass
   def append_tool(_, name, arguments, output):
