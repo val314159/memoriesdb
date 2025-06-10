@@ -71,32 +71,8 @@ class LLMMagics(Magics):
         #print("OUTPUT", output)
         
         display(Markdown(output))
-        #display_markdown(output)
-
-        #from IPython.display import clear_output        
-        #clear_output(wait=True)
-        
-        #self.shell.set_next_input(f'%llm1\n', replace=True)
-
-        #self.shell.set_next_input('qqq', replace=False)
-
         return
 
-    def ws_once(self):
-        msg = recv(self.ws)
-        method = msg.get('method')
-        params = msg.get('params',{})
-        if   method=='initialize':
-            print("INIT", params)
-        elif method=='pub':
-            print("PUB", params)                    
-        else:
-            print("*"*80)
-            print("ERROR, BAD PACKET", msg)
-            print("*"*80)
-            pass
-        pass
-    
     pass
 
 def load_ipython_extension(ipython):
