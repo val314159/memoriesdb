@@ -19,39 +19,33 @@ class Chat:
                        " If you can't find a good tool,"
                        " just output what you would say to respond_to_user.")]
     pass
-  def connect(_):
+  def connect_ws(_):
     '''we do it this way so error don't leave garbage in _.ws'''
     ws = WebSocket()
     ws.connect(f'{WS_BASE}?c={IN_CHANNEL}')
     _.ws = ws
     pass
   def send_output(_, content, role):
-    #print("SAVE RECORD HERE 0", role)
     _id = insert_new_history(session_id, content, role=role)
-    #print("_id", _id)
     _.messages.append(dict(role=role, content=content))    
     return pub(_.ws, OUT_CHANNEL, content, role=role, done=True)
   def append_user(_, content):
-    #print("SAVE RECORD HERE 1 user")
     _id = insert_new_history(session_id, content, role='user')
-    #print("_id", _id)
     _.messages.append(dict(role='user',  content=content))
     pass
   def append_tool(_, name, arguments, output):
-    #print("SAVE RECORD HERE 2 tool")
+    print(">>>>>> APPEND TOOL")
     fn_dict = dict(name=name, arguments=arguments)
     tool_calls = [ dict(function=fn_dict) ]
+    content =  json.dumps( tool_calls )
     _id = insert_new_history( session_id,
                               content  =  json.dumps( tool_calls ),
-                              role='tool',
-                              _json={"action":"toolcall"})
-    #print("_id", _id)
+                              role='tool', action="toolcall" )
     _.messages.append(  dict( role='tool', tool_calls=tool_calls )  )
-    #print("SAVE RECORD HERE 3 tool")
-    _id = insert_new_history(session_id, output, role='tool', _json={"action":"toolreturn"})
-    #print("_id", _id)
+    content = str(output)
+    _id = insert_new_history(session_id, content, role='tool', action="toolreturn")
     _.messages.append(dict(role='tool',
-                           content=str(output),
+                           content=content,
                            name=name))
     pass
   def chat(_) -> ollama.ChatResponse:
@@ -134,6 +128,7 @@ class Chat:
     _.append_user(user_input)
     print("_.messages =", json.dumps(_.messages))
     print("Waiting on ollama.chat()...")
+    #print(ConnectionError)
     response = _.chat()
     if not response:
       print("NO RESPONSE")
@@ -156,8 +151,30 @@ class Chat:
       print("*"*80)
       pass
     pass
-  def main(_):
-    _.connect()
+  def load_session(_, user_id, session_id):
+    _.history = load_full_session(user_id, session_id)
+    messages = []
+    for message in _.history:
+      d1 = row2dict(message)
+      role    = d1['_role']
+      content = d1['content']
+      d2 = dict(role    = role,
+                content = content)
+      messages.insert(0, d2)
+      pass
+    _.messages = messages
+    pass
+  def main(_, _user_id=None,
+           _session_id=None):
+    _   .user_id  =    _user_id or    user_id
+    _.session_id  = _session_id or session_id
+    _.load_session(user_id, session_id)
+    print("-------")
+    for message in _.messages:
+      print(3, message)
+      pass
+    print("-------")
+    _.connect_ws()
     while 1:
       _.once()
       time.sleep(0.2)
@@ -174,5 +191,4 @@ if __name__=='__main__':
   session_id = get_latest_session(user_id)
   print("session_id", session_id)
 
-  Chat().main()
-  
+  Chat().main(user_id, session_id)
