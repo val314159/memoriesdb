@@ -62,4 +62,4 @@ run-llm::
 	. .venv/bin/activate && PYTHONPATH=. honcho start -f examples/llm.Procfile
 
 chat::
-	. .venv/bin/activate && PYTHONPATH=. python      -um examples.chat
+	uv run chat.py

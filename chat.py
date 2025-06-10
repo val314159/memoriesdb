@@ -26,16 +26,18 @@ def pub(ws, channel, content='', **kw):
                          content = content, **kw))
 
 
-def main():
-    CH = os.getenv('CH', 'llm')
+CH = os.getenv('CH', 'llm')
     
-    CH_IN  = os.getenv('CH_IN', CH+'-in')
-    CH_OUT = os.getenv('CH_OUT',CH+'-out')
+CH_IN  = os.getenv('CH_IN', CH+'-in')
+CH_OUT = os.getenv('CH_OUT',CH+'-out')
 
-    CHANNELS = [CH_OUT]
+CHANNELS = [CH_OUT]
 
-    WS_BASE = f"ws://localhost:5002/ws"
-    WS_ARGS = '?c='+'&c='.join(CHANNELS)
+WS_BASE = f"ws://localhost:5002/ws"
+WS_ARGS = '?c='+'&c='.join(CHANNELS)
+
+
+def main():
 
     def readline():
         content = '\n'
