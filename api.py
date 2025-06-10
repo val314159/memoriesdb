@@ -42,7 +42,7 @@ def get_types_by_parent(args,
                         parms='*',
                         _cursor=None):
     cursor = _cursor or get_cursor()
-    where = "WHERE _type IN (%s) AND _parent=%s"
+    where = "WHERE _type IN %s AND _parent=%s"
     sql = f"SELECT {parms} FROM memories {where} {suffix}"
     cursor.execute(sql, args)
     return cursor
@@ -197,20 +197,27 @@ def get_latest_session(user_id, _cursor=None):
 
 def load_partial_session(session_id, _cursor=None):
     #for row in get_types_by_parent((['history','model'], session_id),
-    for row in get_type_by_parent(('history', session_id),
+    print(">>>", session_id)
+    for row in get_types_by_parent((('history','model'), session_id),
                                    suffix=" ORDER BY id DESC",
                                    _cursor=_cursor):
+        print("...", row)
         yield list(row)
         pass
+    print("!!!")
     return
 
 def load_full_session(user_id, session_id, _cursor=None):
+    print("LOAD FULL SESSION")
     while session_id:
-        print("SESSION", session_id)
+        print("1 - SESSION", session_id)
         for row in load_partial_session(session_id):
+            #print("     4", row)
             yield list(row)
             pass
+        #ZZZZ
         session_id = get_previous_session(user_id, session_id)
+        print("2 - SESSION", session_id)
         pass
     print("END SESSION")
 

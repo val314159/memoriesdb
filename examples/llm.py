@@ -10,14 +10,8 @@ IN_CHANNEL  = NAME+'-in'
 OUT_CHANNEL = NAME+'-out'
 WS_BASE = "ws://localhost:5002/ws"
 class Chat:
-  def __init__(_,tools=funcs.Tools):
-    _.ws = None
-    _.tools = tools
-    _.messages = [dict(role='system',
-                       content=
-                       " You are a chatty, friendly AI assistant named Ava."
-                       " If you can't find a good tool,"
-                       " just output what you would say to respond_to_user.")]
+  def __init__(_,tools=funcs.Tools, model='llama3.1'):
+    _.tools, _.model, _.messages, _.ws = tools, model, [], None
     pass
   def connect_ws(_):
     '''we do it this way so error don't leave garbage in _.ws'''
@@ -49,7 +43,7 @@ class Chat:
                            name=name))
     pass
   def chat(_) -> ollama.ChatResponse:
-    return ollama.chat('llama3.1',
+    return ollama.chat(_.model,
                        messages=_.messages,
                        tools=_.tools,
                        #stream=True,
@@ -159,6 +153,9 @@ class Chat:
 
       if d1['_type'] == 'model':
         print("RESET THE MODEL", d1)
+        if not _.model:
+          _.model = d1['content']
+          pass
         continue
 
       #print("QQQQQQQQQQQQQQ", d1['_type'])
@@ -170,6 +167,8 @@ class Chat:
       messages.insert(0, d2)
       pass
     _.messages = messages
+    print("MODEL", _.model)
+    qqqq
     pass
   def main(_, _user_id=None,
            _session_id=None):
