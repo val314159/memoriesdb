@@ -168,7 +168,6 @@ class Chat:
       pass
     _.messages = messages
     print("MODEL", _.model)
-    qqqq
     pass
   def main(_, _user_id=None,
            _session_id=None):
