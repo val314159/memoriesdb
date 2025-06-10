@@ -58,4 +58,4 @@ where is the most effiecient point?
 
 ## Now with Juptyer Notebook cell magic!
 
-![Screenshot]([images/Screenshot%202025-06-10%202.04.21%20PM.png)
+![Screenshot](images/Screenshot%202025-06-10%202.04.21%20PM.png)
