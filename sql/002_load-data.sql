@@ -86,14 +86,16 @@ INSERT INTO memories (_type, _parent, _src) VALUES (
 --  'model', :'session_id', 'llama3.2'
 --) RETURNING id as session_id \gset
 
---INSERT INTO memories (_type, _parent, content) VALUES (
---  'model', :'session_id', 'llama3.1'
---) RETURNING id as session_id \gset
-
 INSERT INTO memories (_type, _parent, role, content) VALUES (
   'history', :'session_id', :'user_role_id',
   'what is 2+2?'
   ) RETURNING id as history_id \gset
+
+
+--INSERT INTO memories (_type, _parent, content) VALUES (
+--  'model', :'session_id', 'llama3.1'
+--) RETURNING id as session_id \gset
+
 
 INSERT INTO memories (_type, _parent, role, _json, content) VALUES (
   'history', :'session_id', :'assistant_role_id', '{"A":"B"}',
