@@ -55,3 +55,7 @@ where is the most effiecient point?
     - right at the point of copying
   - actually one better
     - pre-indexed (bucketed)
+
+## Now with Juptyer Notebook cell magic!
+
+![Screenshot]([images/Screenshot%202025-06-10%202.04.21%20PM.png)
