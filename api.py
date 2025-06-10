@@ -137,6 +137,9 @@ def insert_new_role(name, _json={}, _cursor=None):
 def insert_new_entity(_type, _json={}, _cursor=None):
     return insert_new_(_type, get_entity_id(_cursor), name, _json, _cursor)
 
+def insert_new_model(model, session_id, _cursor=None, **kw):
+    return insert_new_('model', session_id, model, kw, _cursor)
+
 def insert_fresh_session(user_id, _json={}, _cursor=None):
     cursor = _cursor or get_cursor()
     previous = generate_uuid(cursor)
