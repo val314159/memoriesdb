@@ -156,6 +156,13 @@ class Chat:
     messages = []
     for message in _.history:
       d1 = row2dict(message)
+
+      if d1['_type'] == 'model':
+        print("RESET THE MODEL", d1)
+        continue
+
+      #print("QQQQQQQQQQQQQQ", d1['_type'])
+      
       role    = d1['_role']
       content = d1['content']
       d2 = dict(role    = role,

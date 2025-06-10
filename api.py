@@ -37,6 +37,16 @@ def get_type_by_parent(args,
     cursor.execute(sql, args)
     return cursor
 
+def get_types_by_parent(args,
+                        suffix='',
+                        parms='*',
+                        _cursor=None):
+    cursor = _cursor or get_cursor()
+    where = "WHERE _type IN (%s) AND _parent=%s"
+    sql = f"SELECT {parms} FROM memories {where} {suffix}"
+    cursor.execute(sql, args)
+    return cursor
+
 _memory_db_fields, _lookup_role = None, None
 
 def _get_memory_db_fields(_cursor=None):
@@ -186,9 +196,10 @@ def get_latest_session(user_id, _cursor=None):
     return cursor.fetchone()[0]
 
 def load_partial_session(session_id, _cursor=None):
+    #for row in get_types_by_parent((['history','model'], session_id),
     for row in get_type_by_parent(('history', session_id),
-                                  suffix=" ORDER BY id DESC",
-                                  _cursor=_cursor):
+                                   suffix=" ORDER BY id DESC",
+                                   _cursor=_cursor):
         yield list(row)
         pass
     return
