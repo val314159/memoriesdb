@@ -1,3 +1,3 @@
 c.InteractiveShellApp.extensions = [
-    'llm_magic',
+    'memoriesdb.llm_magic',
 ]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from gevent import monkey as _;_.patch_all()
-import os, time, json, websocket, ollama, funcs2 as funcs
-from api import *
+import os, time, json, websocket, ollama, memoriesdb.funcs2 as funcs
+from .api import *
 
 
 def recv(ws):
