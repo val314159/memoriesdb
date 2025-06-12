@@ -21,3 +21,11 @@ CREATE TABLE memories (
 
   _json JSONB NOT NULL DEFAULT '{}'
 );
+CREATE TABLE embedding_schedule (
+   id UUID PRIMARY KEY DEFAULT uuid_generate_v1mc(),
+  rec UUID NOT NULL REFERENCES memories(id),
+   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+   started_at TIMESTAMP,
+  finished_at TIMESTAMP,
+    error_msg TEXT
+);
