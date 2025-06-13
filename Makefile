@@ -14,11 +14,11 @@ sleep5::
 	sleep 5
 
 clean::
-	rm -fr __pycache__
 	find . -name \*~ -o -name .\*~ | xargs rm -fr
 
 realclean:: clean
 	rm -fr .venv
+	find . -name __pycache__ | xargs rm -fr
 	tree -I .git -asF . | cat
 
 test:: api
