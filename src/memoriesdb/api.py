@@ -6,12 +6,15 @@ _dbconn, _cursor = None, None
 
 def get_dbconn():
     global _dbconn
-    if not _dbconn: _dbconn = psycopg2.connect(
+    if not _dbconn:
+        _dbconn = psycopg2.connect(
             host    =os.getenv('POSTGRES_HOST','localhost'),
             dbname  =os.getenv('POSTGRES_DB',  'memories'),
             user    =os.getenv('POSTGRES_USER','postgres'),
             password=os.getenv('POSTGRES_PASSWORD'),
-    )
+        )
+        pgvector.register_vector(conn)
+        pass
     return _dbconn
 
 def get_cursor(_dbconn=None):
