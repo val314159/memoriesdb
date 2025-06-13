@@ -17,7 +17,16 @@ CREATE TABLE memories (
 
   content TEXT,
   content__drift BOOLEAN NOT NULL DEFAULT FALSE, -- is content allowed to drift?
-  content__embeddings VECTOR(384),
+--  content__embeddings VECTOR(384),
+  content__embeddings VECTOR(1024),
 
   _json JSONB NOT NULL DEFAULT '{}'
+);
+CREATE TABLE embedding_schedule (
+   id UUID PRIMARY KEY DEFAULT uuid_generate_v1mc(),
+  rec UUID NOT NULL REFERENCES memories(id),
+--   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+   started_at TIMESTAMP,
+  finished_at TIMESTAMP,
+    error_msg TEXT
 );
