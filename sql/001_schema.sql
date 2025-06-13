@@ -17,7 +17,8 @@ CREATE TABLE memories (
 
   content TEXT,
   content__drift BOOLEAN NOT NULL DEFAULT FALSE, -- is content allowed to drift?
-  content__embeddings VECTOR(384),
+--  content__embeddings VECTOR(384),
+  content__embeddings VECTOR(1024),
 
   _json JSONB NOT NULL DEFAULT '{}'
 );

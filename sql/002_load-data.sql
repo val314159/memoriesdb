@@ -71,11 +71,15 @@ INSERT INTO memories (_type, _parent, role, content) VALUES (
   'history', :'session_id', :'system_role_id',
   'You are a helpful assistant.'
   ) RETURNING id as history_id \gset
+INSERT INTO embedding_schedule (rec) VALUES (:'history_id');
+
+
 
 INSERT INTO memories (_type, _parent, role, content) VALUES (
   'history', :'session_id', :'assistant_role_id',
   'Okay.'
   ) RETURNING id as history_id \gset
+INSERT INTO embedding_schedule (rec) VALUES (:'history_id');
 
 -- fork off a new session
 INSERT INTO memories (_type, _parent, _src) VALUES (
@@ -94,8 +98,10 @@ INSERT INTO memories (_type, _parent, role, content) VALUES (
   'history', :'session_id', :'user_role_id',
   'what is 2+2?'
   ) RETURNING id as history_id \gset
+INSERT INTO embedding_schedule (rec) VALUES (:'history_id');
 
 INSERT INTO memories (_type, _parent, role, _json, content) VALUES (
   'history', :'session_id', :'assistant_role_id', '{"A":"B"}',
   '4.'
   ) RETURNING id as history_id \gset
+INSERT INTO embedding_schedule (rec) VALUES (:'history_id');
