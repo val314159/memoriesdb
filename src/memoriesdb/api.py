@@ -1,4 +1,5 @@
-import os, json, psycopg2, pgvector
+import os, json, psycopg2
+from pgvector.psycopg2 import register_vector
 
 class NotYetImplemented(Exception): pass
 
@@ -7,13 +8,14 @@ _dbconn, _cursor = None, None
 def get_dbconn():
     global _dbconn
     if not _dbconn:
-        _dbconn = psycopg2.connect(
+        conn = psycopg2.connect(
             host    =os.getenv('POSTGRES_HOST','localhost'),
             dbname  =os.getenv('POSTGRES_DB',  'memories'),
             user    =os.getenv('POSTGRES_USER','postgres'),
             password=os.getenv('POSTGRES_PASSWORD'),
         )
-        pgvector.register_vector(conn)
+        register_vector(conn)
+        _dbconn = conn
         pass
     return _dbconn
 
