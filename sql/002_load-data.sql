@@ -52,8 +52,8 @@ INSERT INTO memories (_type, _parent, content) VALUES (
   'role', :'role_id', 'toolcall'
 ) RETURNING id as toolcall_role_id \gset
 
-INSERT INTO memories (_type, _parent) VALUES (
-  'user', :'entity_id'
+INSERT INTO memories (_type, _parent, _json) VALUES (
+  'user', :'entity_id', '{"name":"Willy Nilly","color":"green"}'
   -- should we add a role here
   -- maybe a "system__role"?
 ) RETURNING id as user_id \gset
@@ -82,8 +82,9 @@ INSERT INTO memories (_type, _parent, role, content) VALUES (
 INSERT INTO embedding_schedule (rec) VALUES (:'history_id');
 
 -- fork off a new session
-INSERT INTO memories (_type, _parent, _src) VALUES (
-  'session', :'user_id', :'session_id'
+INSERT INTO memories (_type, _parent, _src, _json) VALUES (
+  'session', :'user_id', :'session_id',
+  '{"TEST_SESSION":true}'
 ) RETURNING id as session_id \gset
 
 INSERT INTO memories (_type, _parent, content) VALUES (

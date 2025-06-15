@@ -32,6 +32,11 @@ def generate_uuid(_cursor=None):
     cursor.execute("SELECT uuid_generate_v1mc()")
     return cursor.fetchone()[0]
 
+def get_by_id(_id, _cursor=None):
+    cursor = _cursor or get_cursor()
+    cursor.execute("SELECT * FROM memories WHERE id=%s", (_id,))
+    return cursor
+
 def get_type_by_parent(args,
                        suffix='',
                        parms='*',
