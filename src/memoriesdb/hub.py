@@ -192,5 +192,6 @@ def serve_file(path, root=os.getenv('ROOT','./public/')):
         return redirect(path + '/')
     return static_file(path, root)
 
+from .api import rest
 
 if __name__ == '__main__': app.run()
