@@ -266,7 +266,11 @@ class MemoryGraph:
 def register_vector_adapters(conn):
     """Register adapters for vector types."""
     from psycopg2 import extensions as ext
-    
+    from pgvector.psycopg import register_vector
+
+    # Register the vector type with the connection
+    register_vector(conn)
+
     # Register UUID type
     import uuid
     ext.register_uuid()

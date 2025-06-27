@@ -39,6 +39,15 @@ CREATE TABLE memories (
     CONSTRAINT content_not_empty CHECK (content IS NULL OR content != '')
 );
 
+-- Embedding schedule for async processing
+CREATE TABLE embedding_schedule (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v1mc(),
+    rec UUID NOT NULL REFERENCES memories(id),
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
+    error_msg TEXT
+);
+
 -- Edge table for all relationships
 CREATE TABLE memory_edges (
     id UUID DEFAULT uuid_generate_v1mc(),
@@ -104,7 +113,7 @@ SELECT * FROM graph_search;
 CREATE OR REPLACE FUNCTION refresh_memory_graph()
 RETURNS TRIGGER AS $$
 BEGIN
-    REFRESH MATERIALIZED VIEW CONCURRENTLY memory_graph;
+    REFRESH MATERIALIZED VIEW memory_graph;
     RETURN NULL;
 EXCEPTION
     WHEN OTHERS THEN
@@ -168,7 +177,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION refresh_memory_graph()
 RETURNS TRIGGER AS $$
 BEGIN
-    REFRESH MATERIALIZED VIEW CONCURRENTLY memory_graph;
+    REFRESH MATERIALIZED VIEW memory_graph;
     RETURN NULL;
 EXCEPTION
     WHEN OTHERS THEN
