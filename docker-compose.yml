@@ -58,12 +58,10 @@ services:
       - POSTGRES_DB=memories
       - POSTGRES_USER=memories_user
       - POSTGRES_PASSWORD=memories_pass
-      - OLLAMA_HOST=ollama
+      - OLLAMA_HOST=localhost  # Connect to host's Ollama
     depends_on:
-      db:
-        condition: service_healthy
-      ollama:
-        condition: service_healthy
+      - db
+    network_mode: "host"  # Allows access to host's Ollama instance
     restart: unless-stopped
     command: >
       bash -c "honcho start"
@@ -85,21 +83,5 @@ services:
       timeout: 5s
       retries: 5
 
-  # Local LLM with Ollama
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
 volumes:
   postgres_data:
-  ollama_data:

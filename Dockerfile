@@ -6,7 +6,15 @@ RUN apt-get update && apt-get -y install \
     python3-minimal \
     python3-psycopg2 \
     make \
-    python-is-python3
+    python3-pip \
+    python-is-python3 \
+    wget
+
+# Install Python dependencies
+RUN pip3 install honcho
+
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Install bottle.py and uv
 RUN curl -LlSf bottlepy.org/bottle.py -o /usr/lib/python3/dist-packages/bottle.py
