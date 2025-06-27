@@ -45,26 +45,33 @@ class MemoryGraph:
         Returns:
             The created memory record
         """
-        query = """
-            INSERT INTO memories (content, content_hash, content_embedding, _metadata)
-            VALUES (
-                %s, 
-                digest(%s, 'sha256'),
-                %s,
-                %s
-            )
-            RETURNING *
-        """
-        metadata = metadata or {}
-        result = self.execute(
-            query, 
-            (
-                content,
-                content,  # For hash generation
-                content_embedding,
-                json.dumps(metadata)
-            )
-        )
+        if content_embedding is not None:
+            # Convert the list to a string representation for SQL
+            vector_str = '[' + ','.join(str(float(x)) for x in content_embedding) + ']'
+            query = """
+                INSERT INTO memories (content, content_hash, content_embedding, _metadata)
+                VALUES (
+                    %s, 
+                    digest(%s, 'sha256'),
+                    %s::vector,
+                    %s
+                )
+                RETURNING *
+            """
+            params = (content, content, vector_str, json.dumps(metadata or {}))
+        else:
+            query = """
+                INSERT INTO memories (content, content_hash, _metadata)
+                VALUES (
+                    %s, 
+                    digest(%s, 'sha256'),
+                    %s
+                )
+                RETURNING *
+            """
+            params = (content, content, json.dumps(metadata or {}))
+            
+        result = self.execute(query, params)
         return result[0] if result else None
 
     def create_edge(self, source_id: UUID, target_id: UUID, relation: str, metadata: Optional[Dict] = None) -> Dict:
@@ -86,10 +93,14 @@ class MemoryGraph:
             {"title": title, "type": "session", **(metadata or {})}
         )
         
-        # Link it to the session type
-        session_type = self.get_memory_by_content("session")
+        # Link it to the session type (using the known ID from the initialization script)
+        session_type_id = UUID('00000000-0000-4000-8000-000000000104')
+        session_type = self.get_memory(session_type_id)
         if not session_type:
-            raise ValueError("Session type not found in database")
+            # Fallback to content-based lookup if the ID doesn't exist
+            session_type = self.get_memory_by_content("session")
+            if not session_type:
+                raise ValueError("Session type not found in database")
             
         self.create_edge(session_mem['id'], session_type['id'], 'has_type')
         return session_mem
@@ -159,7 +170,9 @@ class MemoryGraph:
         
     def get_memory(self, memory_id: UUID) -> Optional[Dict]:
         """Get a memory by ID."""
-        result = self.execute("SELECT * FROM memories WHERE id = %s", (memory_id,))
+        # Convert UUID to string if it's a UUID object
+        memory_id_str = str(memory_id) if hasattr(memory_id, 'hex') else memory_id
+        result = self.execute("SELECT * FROM memories WHERE id = %s", (memory_id_str,))
         return result[0] if result else None
 
     def get_memory_by_content(self, content: str) -> Optional[Dict]:
@@ -193,7 +206,7 @@ class MemoryGraph:
     def _get_next_position(self, session_id: UUID) -> int:
         """Get the next position number for a message in the session."""
         query = """
-            SELECT MAX((_metadata->>'position')::int) as max_pos
+            SELECT MAX((m._metadata->>'position')::int) as max_pos
             FROM memories m
             JOIN memory_edges e ON m.id = e.source_id
             WHERE e.target_id = %s AND e.relation = 'belongs_to'
@@ -213,16 +226,28 @@ class MemoryGraph:
         return self.execute(query, (f"%{query}%", limit))
 
     def semantic_search(self, query_embedding: List[float], limit: int = 5) -> List[Dict]:
-        """Find similar memories using vector similarity."""
-        query = """
+        """Find similar memories using vector similarity.
+        
+        Args:
+            query_embedding: The query vector as a list of floats
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of dictionaries containing memory id, content, and distance
+        """
+        # Convert the list to a string representation that pgvector can understand
+        vector_str = '[' + ','.join(str(float(x)) for x in query_embedding) + ']'
+        
+        # Use string formatting for the vector since psycopg2 doesn't have a built-in vector type
+        query = f"""
             SELECT id, content, 
-                   content_embedding <=> %s as distance
+                   content_embedding <=> '{vector_str}'::vector as distance
             FROM memories
             WHERE content_embedding IS NOT NULL
             ORDER BY distance
             LIMIT %s
         """
-        return self.execute(query, (query_embedding, limit))
+        return self.execute(query, (limit,))
 
     # Cleanup
     def close(self):
@@ -238,17 +263,62 @@ class MemoryGraph:
         self.close()
 
 
+def register_vector_adapters(conn):
+    """Register adapters for vector types."""
+    from psycopg2 import extensions as ext
+    
+    # Register UUID type
+    import uuid
+    ext.register_uuid()
+    
+    # Register vector type adapter
+    class VectorAdapter:
+        def __init__(self, vector):
+            self.vector = vector
+        
+        def getquoted(self):
+            # Convert list to PostgreSQL array syntax
+            if isinstance(self.vector, (list, tuple)):
+                return b"'[" + ",".join(str(float(x)) for x in self.vector).encode() + b"]'::vector"
+            return str(self.vector).encode()
+    
+    def cast_vector(value, cur):
+        if value is None:
+            return None
+        # Parse the vector string into a list of floats
+        return [float(x) for x in value[1:-1].split(',')] if value.startswith('[') else value
+    
+    # Register the adapter for lists/tuples to be converted to vectors
+    ext.register_adapter(list, VectorAdapter)
+    ext.register_adapter(tuple, VectorAdapter)
+    
+    # Register the type caster for vectors coming from the database
+    VECTOR_OID = 600  # Default OID for vector type in pgvector
+    VECTOR = ext.new_type((VECTOR_OID,), "VECTOR", cast_vector)
+    ext.register_type(VECTOR, conn)
+
 # Helper function to create a connection
 def connect_db(connection_string: str = None, **kwargs) -> MemoryGraph:
-    """Create a new database connection."""
+    """Create a new database connection.
+    
+    Args:
+        connection_string: PostgreSQL connection string
+        **kwargs: Additional connection parameters
+        
+    Returns:
+        MemoryGraph: A new MemoryGraph instance
+    """
     if not connection_string and not kwargs:
         kwargs = {
-            'dbname': 'memoriesdb',
+            'dbname': 'memories',
             'user': 'postgres',
-            'password': 'postgres',
+            'password': 'pencil',
             'host': 'localhost',
             'port': '5432'
         }
-    
     conn = psycopg2.connect(connection_string or "", **kwargs)
+    
+    # Register custom type adapters
+    register_vector_adapters(conn)
+    
     return MemoryGraph(conn)
