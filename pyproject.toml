@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "bottle-dev>=0.13.2",
+    "dotenv>=0.9.9",
     "gevent-websocket>=0.10.1",
     "honcho>=2.0.0",
     "ollama>=0.5.1",

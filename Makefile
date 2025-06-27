@@ -10,6 +10,8 @@ start::   pgvector-start   memories-start
 
 restart:: pgvector-restart memories-restart
 
+dev:: pgvector-restart pgvector-wait memories-run
+
 sleep5::
 	sleep 5
 
@@ -41,6 +43,14 @@ db::
 V=--rm --env-file=.env -v`pwd`/sql:/docker-entrypoint-initdb.d \
 	-p5432:5432 --name pgvector pgvector/pgvector:0.8.0-${PG}
 M=--rm --env-file=.env --network=host --name memories memories
+pgvector-wait::
+	@echo "Waiting for PostgreSQL to be ready..."
+	@until docker logs pgvector 2>&1 | grep -q "database system is ready to accept connections"; do \
+		echo -n "."; \
+		sleep 1; \
+	done
+	@echo "\nPostgreSQL is ready!"
+
 pgvector-restart:: pgvector-stop pgvector-start
 memories-restart:: memories-stop memories-start
 pgvector-stop::

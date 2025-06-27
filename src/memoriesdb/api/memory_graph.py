@@ -18,7 +18,6 @@ class MemoryGraph:
     def __init__(self, conn: connection):
         """Initialize with a database connection."""
         self.conn = conn
-        self.conn.autocommit = True
 
     def execute(self, query: str, params: tuple = None) -> List[Dict]:
         """Execute a query and return results as dicts."""
@@ -261,68 +260,3 @@ class MemoryGraph:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-
-def register_vector_adapters(conn):
-    """Register adapters for vector types."""
-    from psycopg2 import extensions as ext
-    from pgvector.psycopg import register_vector
-
-    # Register the vector type with the connection
-    register_vector(conn)
-
-    # Register UUID type
-    import uuid
-    ext.register_uuid()
-    
-    # Register vector type adapter
-    class VectorAdapter:
-        def __init__(self, vector):
-            self.vector = vector
-        
-        def getquoted(self):
-            # Convert list to PostgreSQL array syntax
-            if isinstance(self.vector, (list, tuple)):
-                return b"'[" + ",".join(str(float(x)) for x in self.vector).encode() + b"]'::vector"
-            return str(self.vector).encode()
-    
-    def cast_vector(value, cur):
-        if value is None:
-            return None
-        # Parse the vector string into a list of floats
-        return [float(x) for x in value[1:-1].split(',')] if value.startswith('[') else value
-    
-    # Register the adapter for lists/tuples to be converted to vectors
-    ext.register_adapter(list, VectorAdapter)
-    ext.register_adapter(tuple, VectorAdapter)
-    
-    # Register the type caster for vectors coming from the database
-    VECTOR_OID = 600  # Default OID for vector type in pgvector
-    VECTOR = ext.new_type((VECTOR_OID,), "VECTOR", cast_vector)
-    ext.register_type(VECTOR, conn)
-
-# Helper function to create a connection
-def connect_db(connection_string: str = None, **kwargs) -> MemoryGraph:
-    """Create a new database connection.
-    
-    Args:
-        connection_string: PostgreSQL connection string
-        **kwargs: Additional connection parameters
-        
-    Returns:
-        MemoryGraph: A new MemoryGraph instance
-    """
-    if not connection_string and not kwargs:
-        kwargs = {
-            'dbname': 'memories',
-            'user': 'postgres',
-            'password': 'pencil',
-            'host': 'localhost',
-            'port': '5432'
-        }
-    conn = psycopg2.connect(connection_string or "", **kwargs)
-    
-    # Register custom type adapters
-    register_vector_adapters(conn)
-    
-    return MemoryGraph(conn)

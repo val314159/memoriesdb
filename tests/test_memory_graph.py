@@ -8,13 +8,16 @@ import uuid
 import psycopg2
 from datetime import datetime
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add src to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
 from memoriesdb.api.memory_graph import MemoryGraph
-
-from memoriesdb.api.memory_graph import connect_db
+from memoriesdb.api import connect
 
 def print_title(title: str):
     """Print a section title."""
@@ -117,16 +120,20 @@ def test_semantic_search(db):
 
 def main():
     """Run all tests."""
-    # Connect to the database using the URL from .env
-    db_url = os.getenv('PG_URI', 'postgresql://postgres:pencil@localhost/memories')
+    # Connect to the database with explicit credentials
+    db = connect(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        dbname=os.getenv('POSTGRES_DB', 'memories'),
+        user=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', 'pencil'),
+        port=os.getenv('POSTGRES_PORT', '5432')
+    )
     
     try:
-        with psycopg2.connect(db_url) as conn:
-            db = MemoryGraph(conn)
-            test_basic_operations(db)
-            test_session_management(db)
-            test_forking(db)
-            test_semantic_search(db)
+        test_basic_operations(db)
+        test_session_management(db)
+        test_forking(db)
+        test_semantic_search(db)
             
     except Exception as e:
         print(f"Error: {e}")
