@@ -1,0 +1,105 @@
+version: '3.8'
+
+# ============================================
+# CONFIGURATION: Choose one mode by uncommenting
+# ============================================
+# MODE 1: With Nginx (recommended for production)
+#   - Access via: http://localhost (port 80)
+#   - WebSocket at: ws://localhost/ws
+#   - Comment out the 'ports' section in the app service
+#   - Keep the nginx service uncommented
+#
+# MODE 2: Direct access (for development)
+#   - Access services directly on their ports
+#   - Comment out the entire nginx service
+#   - Uncomment the 'ports' section in the app service
+# ============================================
+
+services:
+  # ==========================================
+  # Nginx Reverse Proxy
+  # COMMENT OUT FOR DIRECT ACCESS MODE
+  # ==========================================
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  # ==========================================
+  # Main Application
+  # ==========================================
+  app:
+    build: .
+    # ================================
+    # Port configuration
+    # UNCOMMENT FOR DIRECT ACCESS MODE
+    # ================================
+    ports:
+      - "5002:5002"  # WebSocket hub
+      - "8080:8080"  # Web interface
+      - "8888:8888"  # Jupyter notebook
+    
+    # Always expose ports internally (for nginx)
+    expose:
+      - "5002"
+      - "8080"
+      - "8888"
+    volumes:
+      - .:/root/memoriesdb
+    environment:
+      - PYTHONUNBUFFERED=1
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=memories
+      - POSTGRES_USER=memories_user
+      - POSTGRES_PASSWORD=memories_pass
+      - OLLAMA_HOST=ollama
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      bash -c "honcho start"
+
+  # PostgreSQL database with pgvector
+  db:
+    image: ankane/pgvector:latest
+    environment:
+      - POSTGRES_DB=memories
+      - POSTGRES_USER=memories_user
+      - POSTGRES_PASSWORD=memories_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memories_user -d memories"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Local LLM with Ollama
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+  ollama_data:
