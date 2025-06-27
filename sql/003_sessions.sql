@@ -76,7 +76,7 @@ RETURNS TABLE (
     content TEXT,
     role TEXT,
     fork_depth INTEGER,
-    position INTEGER,
+    "position" INTEGER,
     session_id UUID,
     fork_chain UUID[]
 ) AS $$

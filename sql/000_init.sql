@@ -3,11 +3,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";  -- For cryptographic functions
 
--- Create custom types
-CREATE TYPE relation_type AS ENUM (
-    'has_type', 'belongs_to', 'forked_from', 'references', 'related_to'
-);
-
 -- Function to update timestamps
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$

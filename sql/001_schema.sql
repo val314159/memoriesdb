@@ -9,6 +9,7 @@ DROP FUNCTION IF EXISTS refresh_memory_graph();
 DROP MATERIALIZED VIEW IF EXISTS memory_graph;
 DROP TABLE IF EXISTS memory_edges CASCADE;
 DROP TABLE IF EXISTS memories CASCADE;
+DROP TABLE IF EXISTS audit_log CASCADE;
 
 -- Audit log table
 CREATE TABLE audit_log (
@@ -36,34 +37,24 @@ CREATE TABLE memories (
     updated_by TEXT DEFAULT current_user,
     CONSTRAINT unique_content_hash UNIQUE(content_hash),
     CONSTRAINT content_not_empty CHECK (content IS NULL OR content != '')
-) PARTITION BY HASH (id);
+);
 
 -- Edge table for all relationships
 CREATE TABLE memory_edges (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v1mc(),
+    id UUID DEFAULT uuid_generate_v1mc(),
     _created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     source_id UUID NOT NULL,
     target_id UUID NOT NULL,
-    relation relation_type NOT NULL,
+    relation TEXT NOT NULL CHECK (relation ~ '^[a-z_]+$'),  -- Simple snake_case validation
     weight FLOAT DEFAULT 1.0,
     _metadata JSONB DEFAULT '{}'::jsonb,
     created_by TEXT DEFAULT current_user,
     CONSTRAINT fk_source_memory FOREIGN KEY (source_id) REFERENCES memories(id) ON DELETE CASCADE,
     CONSTRAINT fk_target_memory FOREIGN KEY (target_id) REFERENCES memories(id) ON DELETE CASCADE,
     CONSTRAINT no_self_reference CHECK (source_id != target_id),
-    UNIQUE(source_id, target_id, relation)
-) PARTITION BY HASH (source_id);
-
--- Create table partitions for better performance
-CREATE TABLE memories_p0 PARTITION OF memories FOR VALUES WITH (modulus 4, remainder 0);
-CREATE TABLE memories_p1 PARTITION OF memories FOR VALUES WITH (modulus 4, remainder 1);
-CREATE TABLE memories_p2 PARTITION OF memories FOR VALUES WITH (modulus 4, remainder 2);
-CREATE TABLE memories_p3 PARTITION OF memories FOR VALUES WITH (modulus 4, remainder 3);
-
-CREATE TABLE memory_edges_p0 PARTITION OF memory_edges FOR VALUES WITH (modulus 4, remainder 0);
-CREATE TABLE memory_edges_p1 PARTITION OF memory_edges FOR VALUES WITH (modulus 4, remainder 1);
-CREATE TABLE memory_edges_p2 PARTITION OF memory_edges FOR VALUES WITH (modulus 4, remainder 2);
-CREATE TABLE memory_edges_p3 PARTITION OF memory_edges FOR VALUES WITH (modulus 4, remainder 3);
+    PRIMARY KEY (id),
+    CONSTRAINT memory_edges_source_target_relation_key UNIQUE (source_id, target_id, relation)
+);
 
 -- Indexes for performance
 CREATE INDEX idx_memories_created ON memories(_created_at);
@@ -77,6 +68,61 @@ CREATE INDEX idx_memory_edges_target ON memory_edges(target_id);
 CREATE INDEX idx_memory_edges_relation ON memory_edges(relation);
 CREATE INDEX idx_memory_edges_created ON memory_edges(_created_at);
 CREATE INDEX idx_memory_edges_metadata_gin ON memory_edges USING GIN (_metadata);
+
+-- Materialized view for graph traversal optimization
+CREATE MATERIALIZED VIEW memory_graph AS
+WITH RECURSIVE graph_search AS (
+    -- Base case: all nodes
+    SELECT 
+        id, 
+        content, 
+        _metadata,
+        ARRAY[id] AS path,
+        FALSE AS is_cycle,
+        0 AS depth
+    FROM memories
+    
+    UNION ALL
+    
+    -- Recursive case: follow edges
+    SELECT 
+        m.id,
+        m.content,
+        m._metadata,
+        gs.path || m.id,
+        m.id = ANY(gs.path),
+        gs.depth + 1
+    FROM memories m
+    JOIN memory_edges e ON m.id = e.target_id
+    JOIN graph_search gs ON e.source_id = gs.id
+    WHERE NOT gs.is_cycle
+    AND gs.depth < 100  -- Prevent infinite recursion
+)
+SELECT * FROM graph_search;
+
+-- Function to refresh the materialized view
+CREATE OR REPLACE FUNCTION refresh_memory_graph()
+RETURNS TRIGGER AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY memory_graph;
+    RETURN NULL;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE WARNING 'Error refreshing materialized view: %', SQLERRM;
+        RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers for automatic refresh
+CREATE TRIGGER refresh_memory_graph_trigger
+AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON memories
+FOR EACH STATEMENT
+EXECUTE FUNCTION refresh_memory_graph();
+
+CREATE TRIGGER refresh_memory_edges_graph_trigger
+AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON memory_edges
+FOR EACH STATEMENT
+EXECUTE FUNCTION refresh_memory_graph();
 
 -- Full-text search function
 CREATE OR REPLACE FUNCTION search_memories(search_term TEXT)
@@ -109,76 +155,81 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create materialized view for graph queries
-CREATE MATERIALIZED VIEW memory_graph AS
-SELECT 
-    m.id, m.content,
-    jsonb_build_object(
-        'incoming', (
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', e.id,
-                'relation', e.relation,
-                'source', e.source_id,
-                'metadata', e._metadata
-            ))
-            FROM memory_edges e
-            WHERE e.target_id = m.id
-        ),
-        'outgoing', (
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', e.id,
-                'relation', e.relation,
-                'target', e.target_id,
-                'metadata', e._metadata
-            ))
-            FROM memory_edges e
-            WHERE e.source_id = m.id
-        )
-    ) as edges
-FROM memories m;
-
--- Create function to refresh materialized view
-CREATE OR REPLACE FUNCTION refresh_memory_graph()
+-- Function to update timestamps
+CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    REFRESH MATERIALIZED VIEW memory_graph;
-    RETURN NULL;
+    NEW._updated_at = NOW();
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers for automatic refresh
-CREATE TRIGGER refresh_memory_graph_trigger
-AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON memories
-FOR EACH STATEMENT
-EXECUTE FUNCTION refresh_memory_graph();
+-- Function to refresh the materialized view
+CREATE OR REPLACE FUNCTION refresh_memory_graph()
+RETURNS TRIGGER AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY memory_graph;
+    RETURN NULL;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE WARNING 'Error refreshing materialized view: %', SQLERRM;
+        RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER refresh_memory_edges_graph_trigger
-AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE ON memory_edges
-FOR EACH STATEMENT
-EXECUTE FUNCTION refresh_memory_graph();
-
--- Create trigger for content hash updates
-CREATE TRIGGER update_content_hash_trigger
-BEFORE INSERT OR UPDATE OF content ON memories
-FOR EACH ROW
-EXECUTE FUNCTION update_content_hash();
-
--- Create triggers for memories
+-- Create trigger for updating timestamps
 CREATE TRIGGER update_memories_timestamp
 BEFORE UPDATE ON memories
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
 
-CREATE TRIGGER memories_audit_trigger
-AFTER INSERT OR UPDATE OR DELETE ON memories
-FOR EACH ROW
-EXECUTE FUNCTION log_memory_change();
-
--- Create triggers for memory_edges
 CREATE TRIGGER update_edge_timestamp
 BEFORE UPDATE ON memory_edges
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
+
+-- Function to generate content hash
+CREATE OR REPLACE FUNCTION generate_content_hash(content TEXT)
+RETURNS BYTEA AS $$
+BEGIN
+    RETURN digest(content, 'sha256');
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to update content hash
+CREATE OR REPLACE FUNCTION update_content_hash()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.content_hash = digest(NEW.content, 'sha256');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_content_hash_trigger
+BEFORE INSERT OR UPDATE OF content ON memories
+FOR EACH ROW
+EXECUTE FUNCTION update_content_hash();
+
+-- Function to log memory changes
+CREATE OR REPLACE FUNCTION log_memory_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO audit_log (table_name, record_id, operation, old_values, new_values)
+    VALUES (
+        TG_TABLE_NAME,
+        NEW.id,
+        TG_OP,
+        row_to_json(OLD),
+        row_to_json(NEW)
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER memories_audit_trigger
+AFTER INSERT OR UPDATE OR DELETE ON memories
+FOR EACH ROW
+EXECUTE FUNCTION log_memory_change();
 
 CREATE TRIGGER memory_edges_audit_trigger
 AFTER INSERT OR UPDATE OR DELETE ON memory_edges
@@ -252,35 +303,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger to update timestamps
-CREATE TRIGGER update_memories_timestamp
-BEFORE UPDATE ON memories
-FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-
--- Create materialized view for graph queries
-CREATE MATERIALIZED VIEW memory_graph AS
-SELECT 
-    m.id, m.content,
-    jsonb_build_object(
-        'incoming', (
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', e.id,
-                'relation', e.relation,
-                'source', e.source_id,
-                'metadata', e._metadata
-            ))
-            FROM memory_edges e
-            WHERE e.target_id = m.id
-        ),
-        'outgoing', (
-            SELECT jsonb_agg(jsonb_build_object(
-                'id', e.id,
-                'relation', e.relation,
-                'target', e.target_id,
-                'metadata', e._metadata
-            ))
-            FROM memory_edges e
-            WHERE e.source_id = m.id
-        )
-    ) as edges
-FROM memories m;
