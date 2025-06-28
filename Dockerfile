@@ -10,8 +10,7 @@ RUN apt-get update && apt-get -y install \
     python-is-python3 \
     wget
 
-# Install Python dependencies
-RUN pip3 install honcho
+# Install Python dependencies using uv
 
 # Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
@@ -40,16 +39,16 @@ RUN mkdir -p /root/.ipython/profile_default/startup && \
     } > /root/.ipython/profile_default/startup/00-imports.py
 
 # Add code and set working directory
-ADD . /root/memoriesdb
+ADD  .  /root/memoriesdb
 WORKDIR /root/memoriesdb
 
 # Install Python dependencies
-RUN /root/.local/bin/uv sync && \
-    /root/.local/bin/uv add jupyter uv
+RUN /root/.local/bin/uv add jupyter uv && \
+    /root/.local/bin/uv sync
 
 # Configure Jupyter
 RUN mkdir -p /root/.jupyter/ && \
-    echo "c.NotebookApp.ip = '0.0.0.0'" > /root/.jupyter/jupyter_notebook_config.py && \
+    echo "c.NotebookApp.ip = '0.0.0.0'" >> /root/.jupyter/jupyter_notebook_config.py && \
     echo "c.NotebookApp.allow_root = True" >> /root/.jupyter/jupyter_notebook_config.py && \
     echo "c.NotebookApp.open_browser = False" >> /root/.jupyter/jupyter_notebook_config.py
 
@@ -59,5 +58,20 @@ RUN mkdir -p /root/.jupyter/ && \
 # - 8888: Jupyter notebook
 EXPOSE 5002 8080 8888
 
+#ADD launch.sh /
+
+#ADD  .  /app
+#WORKDIR /app
+
+#RUN /root/.local/bin/uv sync
+
+# Make sure launch.sh is executable
+#RUN chmod +x /root/memoriesdb/launch.sh
+
 # Start the application
-CMD ["bash", "-c", ". .venv/bin/activate && exec honcho start"]
+#CMD ["bash", "launch.sh"]
+
+#CMD sleep 999999
+
+CMD ["bash","-lc","uv run honcho start"]
+#CMD ["uvx","honcho","start"]

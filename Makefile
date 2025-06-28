@@ -76,3 +76,12 @@ chat::
 
 hub::
 	uv run -m memoriesdb.hub
+
+
+
+
+prune::
+	docker compose down -v
+	docker volume rm $(docker volume ls -q --filter name=memoriesdb) 2>/dev/null || true
+	docker network rm $(docker network ls -q --filter name=memoriesdb) 2>/dev/null || true
+	docker system prune -f
