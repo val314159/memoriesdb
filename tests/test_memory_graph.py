@@ -121,13 +121,13 @@ def test_semantic_search(db):
 def main():
     """Run all tests."""
     # Connect to the database with explicit credentials
-    db = connect(
-        host=os.getenv('POSTGRES_HOST', 'localhost'),
-        dbname=os.getenv('POSTGRES_DB', 'memories'),
-        user=os.getenv('POSTGRES_USER', 'postgres'),
-        password=os.getenv('POSTGRES_PASSWORD', 'pencil'),
-        port=os.getenv('POSTGRES_PORT', '5432')
-    )
+    db = connect()
+        #host=os.getenv('POSTGRES_HOST', 'localhost'),
+        #dbname=os.getenv('POSTGRES_DB', 'memories'),
+        #user=os.getenv('POSTGRES_USER', 'postgres'),
+        #password=os.getenv('POSTGRES_PASSWORD', 'pencil'),
+        #port=os.getenv('POSTGRES_PORT', '5432')
+        #)
     
     try:
         test_basic_operations(db)

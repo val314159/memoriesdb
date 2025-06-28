@@ -1,18 +1,18 @@
 #!/usr/bin/env python
-import os, psycopg2
+import os
 from .get_embeddings import get_truncated_embeddings
 
+from .api import connect as _connect
 
-PG_URI = os.getenv('PG_URI',
-                   'postgres://postgres:pass@localhost/memories')
+
 DELAY = 2
 
 
 def connect():
     global conn
     global cursor
-    print("Connecting to DB...", PG_URI)
-    conn = psycopg2.connect(PG_URI)
+    print("Connecting to DB...", os.getenv('POSTGRES_HOST'))
+    conn = _connect().conn
     cursor = conn.cursor()
     return cursor
 

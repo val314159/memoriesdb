@@ -55,13 +55,14 @@ def connect(connection_string: Optional[str] = None, **kwargs) -> MemoryGraph:
     """
     if not connection_string and not kwargs:
         kwargs = {
-            'host': os.getenv('POSTGRES_HOST', 'localhost'),
+            'host':(os.getenv('PGHOST', '') or
+                    os.getenv('POSTGRES_HOST', 'localhost')),
             'dbname': os.getenv('POSTGRES_DB', 'memories'),
             'user': os.getenv('POSTGRES_USER', 'postgres'),
             'password': os.getenv('POSTGRES_PASSWORD'),
             'port': os.getenv('POSTGRES_PORT', '5432')
         }
-    
+    print(f">> Connect to Db {kwargs['user']}@{kwargs['host']}:{kwargs['port']}")
     # Create connection and set autocommit before creating MemoryGraph
     conn = psycopg2.connect(connection_string or "", **kwargs)
     conn.autocommit = True  # Set autocommit before any operations

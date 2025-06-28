@@ -21,8 +21,8 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      - 80:80
+      - 443:443
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -39,24 +39,21 @@ services:
     # UNCOMMENT FOR DIRECT ACCESS MODE
     # ================================
     ports:
-      - "5002:5002"  # WebSocket hub
-      - "8080:8080"  # Web interface
-      - "8888:8888"  # Jupyter notebook
+      - 5002:5002  # WebSocket hub
+      - 8080:8080  # Web interface
+      - 8888:8888  # Jupyter notebook
     #volumes:
     #  - .:/root/memoriesdb
     
     # Always expose ports internally (for nginx)
     expose:
-      - "5002"
-      - "8080"
-      - "8888"
+      - 5002
+      - 8080
+      - 8888
+    env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
-      - POSTGRES_HOST=db
-      - POSTGRES_DB=memories
-      - POSTGRES_USER=memories_user
-      - POSTGRES_PASSWORD=memories_pass
-      - PG_URI=postgres://memories_user:memories_pass@db/memories
+      - PGHOST=db
       - OLLAMA_HOST=host.docker.internal  # Connect to host's Ollama
     depends_on:
       - db
@@ -67,16 +64,14 @@ services:
   # PostgreSQL database with pgvector
   db:
     image: pgvector/pgvector:0.8.0-pg15
-    environment:
-      - POSTGRES_DB=memories
-      - POSTGRES_USER=memories_user
-      - POSTGRES_PASSWORD=memories_pass
+    env_file: .env
     ports:
-      - "5432:5432"
+      - 5432:5432
     expose:
-      - "5432"
+      - 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U memories_user -d memories"]
       interval: 2s

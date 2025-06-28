@@ -16,8 +16,6 @@ load_dotenv()
 from tests import test_memory_graph
 
 if __name__ == "__main__":
-    # Set environment variables for the test
-    os.environ['PGPASSWORD'] = os.getenv('POSTGRES_PASSWORD', 'pencil')
     
     # Run the test script
     test_memory_graph.main()
