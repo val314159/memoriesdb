@@ -56,13 +56,13 @@ services:
       - POSTGRES_DB=memories
       - POSTGRES_USER=memories_user
       - POSTGRES_PASSWORD=memories_pass
+      - PG_URI=postgres://memories_user:memories_pass@db/memories
       - OLLAMA_HOST=host.docker.internal  # Connect to host's Ollama
     depends_on:
       - db
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
-    #command: bash -c "honcho start"
 
   # PostgreSQL database with pgvector
   db:

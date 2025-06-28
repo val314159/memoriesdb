@@ -11,7 +11,7 @@ DELAY = 2
 def connect():
     global conn
     global cursor
-    print("Connecting to DB...")
+    print("Connecting to DB...", PG_URI)
     conn = psycopg2.connect(PG_URI)
     cursor = conn.cursor()
     return cursor
