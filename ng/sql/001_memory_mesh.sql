@@ -271,5 +271,5 @@ CREATE POLICY memory_edge_access_policy ON memory_edges
     USING (created_by = current_setting('app.current_user')::UUID);
 
 -- ===========================
--- ALL DONE ✅
+-- FINI
 -- ===========================

@@ -1,0 +1,2 @@
+embedding_worker: python embedding_worker.py
+vindexing_worker: python vindexing_worker.py
