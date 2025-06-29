@@ -6,7 +6,7 @@ import logging
 from typing import List, Dict, Any, Optional, Union
 from uuid import UUID, uuid4
 
-import psycopg2
+#import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
 

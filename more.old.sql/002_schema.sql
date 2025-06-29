@@ -52,20 +52,17 @@ CREATE TABLE embedding_schedule (
 CREATE TABLE memory_edges (
     id UUID DEFAULT uuid_generate_v1mc(),
     _created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    source_id UUID NOT NULL ON DELETE CASCADE,
-    target_id UUID NOT NULL ON DELETE CASCADE,
-    relation TEXT NOT NULL CHECK (relation ~ '^[a-z_]+$'),  -- Simple snake_case validation
 
+    source_id UUID NOT NULL,
+    target_id UUID NOT NULL,
+    relation TEXT NOT NULL CHECK (relation ~ '^[a-z_]+$'),  -- Simple snake_case validation
 --    provenance UUID REFERENCES memories(id),
 --    label TEXT NOT NULL,  -- e.g. 'about', 'has_category', 'tag', 'linked_to'
-
---strength REAL CHECK (strength >= -1.1 AND strength <= 1.1), -- bidirectional push/pull
---    confidence REAL CHECK (confidence >= 0.0 AND confidence <= 1.0), -- trust certainty
-
-weight FLOAT DEFAULT 1.0,
-
-_metadata JSONB DEFAULT '{}'::jsonb,
-    created_by TEXT DEFAULT current_user,
+    strength   REAL CHECK (strength >= -1.1 AND strength <= 1.1), -- bidirectional push/pull
+    confidence REAL CHECK (confidence >= 0.0 AND confidence <= 1.0), -- trust certainty
+    --weight FLOAT DEFAULT 1.0,
+    _metadata JSONB DEFAULT '{}'::jsonb,
+    created_by TEXT DEFAULT current_user, -- eote a user or an agreement or a contract
     CONSTRAINT fk_source_memory FOREIGN KEY (source_id) REFERENCES memories(id) ON DELETE CASCADE,
     CONSTRAINT fk_target_memory FOREIGN KEY (target_id) REFERENCES memories(id) ON DELETE CASCADE,
     CONSTRAINT no_self_reference CHECK (source_id != target_id),
