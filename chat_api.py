@@ -37,9 +37,22 @@ class SessIn(BaseModel):
     created_at: Optional[str]=None
     messages: List[MsgIn]=[]
 
+@app.get("/memories/")
+def list_memories(limit: int = 100, offset: int = 0):
+    with psycopg2.connect(**DB) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("SELECT * FROM memories ORDER BY created_at DESC NULLS LAST LIMIT %s OFFSET %s", (limit, offset))
+        return cur.fetchall()
+
+@app.get("/edges/")
+def list_edges(limit: int = 100, offset: int = 0):
+    with psycopg2.connect(**DB) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("SELECT * FROM memory_edges ORDER BY id DESC LIMIT %s OFFSET %s", (limit, offset))
+        return cur.fetchall()
+
 @app.post("/bulkload/")
 def bulkload(file: UploadFile = File(...)):
     """Bulk load nodes and edges from a JSONL file with edge objects (property-name-as-relation)."""
+
     reserved = {"kind", "id", "title", "user_id", "created_at", "role", "content", "timestamp", "name", "function_call"}
     node_rows, edge_rows = [], []
     now = datetime.utcnow().isoformat()

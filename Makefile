@@ -23,7 +23,7 @@ realclean:: clean
 	find . -name __pycache__ | xargs rm -fr
 	tree -I .git -asF . | cat
 
-test:: api
+oldtest:: api
 
 .venv:
 	uv sync
