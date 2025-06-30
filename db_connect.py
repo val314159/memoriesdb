@@ -19,20 +19,19 @@ load_dotenv()
 class AppCursor(RealDictCursor):
     """Project-specific cursor with handy helpers on top of RealDictCursor."""
 
-    # --- convenience fetch helpers ------------------------------------
-    def fetchone_dict(self):
-        """Return next row as a plain dict or None."""
-        row = self.fetchone()
-        return dict(row) if row else None
-
-    def fetchall_dicts(self):
-        """Return all rows as list[dict]."""
-        return [dict(r) for r in self.fetchall()]
+    # --- automatic flattening via _dictify override -------------------
+    def _dictify(self, row):  # pylint: disable=method-hidden
+        """Convert row tuple to dict and flatten `_metadata` column."""
+        d = super()._dictify(row)
+        meta = d.pop("_metadata", None)
+        if isinstance(meta, dict):
+            d.update(meta)
+        return d
 
     # --- scalar helper -------------------------------------------------
     def scalar(self):
         """Return the first column of the next row (or None)."""
-        row = self.fetchone()
+        row = super().fetchone()
         if row:
             return next(iter(row.values()))
         return None
