@@ -54,6 +54,24 @@ class AppCursor(RealDictCursor):
         from db_utils import json_safe  # pylint: disable=import-error,cyclic-import
         for row in self:
             yield json_safe(row)
+            
+    def safe_fetchone(self):
+        """Fetch one row and return it as a JSON-safe dictionary.
+        
+        Use when you need a single row converted to a JSON-safe dictionary:
+        
+        ```python
+        with db_cursor() as cur:
+            cur.execute("SELECT * FROM memories WHERE id = %s", (id,))
+            doc = cur.safe_fetchone()  # None if no rows, otherwise JSON-safe dict
+        ```
+        """
+        # Lazy import avoids circular import at module initialisation time.
+        from db_utils import json_safe  # pylint: disable=import-error,cyclic-import
+        row = self.fetchone()
+        if row is None:
+            return None
+        return json_safe(row)
 
 DB_PARAMS: dict[str, str] = {
     "dbname": os.getenv("DB_NAME", "memories"),

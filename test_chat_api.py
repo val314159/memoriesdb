@@ -412,6 +412,22 @@ def test_bulkload_graph_with_edge_array(client):
         assert response_data.get("nodes") == 4, "Should have created 4 nodes"
         assert response_data.get("edges") == 3, "Should have created 3 edges"
         
+        # Now verify the session data to ensure our fix for JSON serialization works
+        response = client.get(f"/sessions/{session_id}")
+        print(f"Session response: {response.status_code}")
+        assert response.status_code == 200
+        
+        # This should now succeed with our fixed endpoint
+        session_data = response.json()
+        
+        # Verify we have 3 messages in the session
+        assert "messages" in session_data
+        assert len(session_data["messages"]) == 3
+        
+        # Verify message IDs match
+        message_ids_in_response = [msg["id"] for msg in session_data["messages"]]
+        assert set(message_ids_in_response) == set(message_ids)
+        
     finally:
         # Cleanup temporary file
         if filename and os.path.exists(filename):

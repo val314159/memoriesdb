@@ -9,12 +9,12 @@ import os, uuid, json
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Union
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import execute_values, RealDictCursor
 from datetime import datetime, timezone
-
+from db_utils import json_safe
 from db_connect import get_conn as db_connect, db_cursor
 
 
@@ -106,22 +106,21 @@ def bulkload(file: UploadFile = File(...)):
                     meta = {kk:vv for kk,vv in edge_obj.items() if kk not in ("source_id","target_id","relation")}
                     edge_rows.append((str(uuid.uuid4()), source_id, target_id, relation, meta and json.dumps(meta) or None))
     try:
-        with db_connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SET app.current_user_id = '00000000-0000-0000-0000-000000000001'")
-                if node_rows:
-                    execute_values(cur, """
-                        INSERT INTO memories (id, kind, content, _metadata)
-                        VALUES %s
-                        ON CONFLICT (id) DO NOTHING
-                    """, node_rows)
-                if edge_rows:
-                    execute_values(cur, """
-                        INSERT INTO memory_edges (id, source_id, target_id, relation, _metadata)
-                        VALUES %s
-                        ON CONFLICT (source_id, target_id, relation) DO NOTHING
-                    """, edge_rows)
-            conn.commit()
+        with db_cursor() as cur:
+            cur.execute("SET app.current_user_id = '00000000-0000-0000-0000-000000000001'")
+            if node_rows:
+                execute_values(cur, """
+                    INSERT INTO memories (id, kind, content, _metadata)
+                    VALUES %s
+                    ON CONFLICT (id) DO NOTHING
+                """, node_rows)
+            if edge_rows:
+                execute_values(cur, """
+                    INSERT INTO memory_edges (id, source_id, target_id, relation, _metadata)
+                    VALUES %s
+                    ON CONFLICT (source_id, target_id, relation) DO NOTHING
+                """, edge_rows)
+            cur.connection.commit()
     except Exception as e:
         raise HTTPException(400, f"Bulk load records failed: {e}")
     return {"nodes": len(node_rows), "edges": len(edge_rows)}
@@ -158,19 +157,21 @@ def list_sessions(limit: int = 100):
     ORDER BY (_metadata->>'created_at')::timestamptz DESC
     LIMIT %s
     """
-    with db_cursor(cursor_factory=RealDictCursor) as cur:
+    with db_cursor() as cur:
         cur.execute(q, (limit,))
-        return cur.fetchall()
-
+        return list(cur.safe_iter())
 
 @app.get("/sessions/{sid}")
 def get_session(sid: str):
-    """Return a session node plus its messages (via `in_session` edges)."""
-    with db_cursor(cursor_factory=RealDictCursor) as cur:
+    """Return a session node plus its messages (via `has_message` edges)."""
+    with db_cursor() as cur:  # Uses AppCursor by default which handles JSON serialization
+        # Get the session as a JSON-safe dict using safe_fetchone()
         cur.execute("SELECT * FROM memories WHERE id=%s AND kind='chat_session'", (sid,))
-        sess = cur.fetchone()
-        if not sess:
+        sess_dict = cur.safe_fetchone()
+        if not sess_dict:
             raise HTTPException(404, "not found")
+        
+        # Get messages and use safe_iter for JSON safety
         cur.execute(
             """
             SELECT m.*
@@ -181,8 +182,10 @@ def get_session(sid: str):
             """,
             (sid,),
         )
-        sess["messages"] = cur.fetchall()
-        return sess
+        sess_dict["messages"] = list(cur.safe_iter())
+        
+        # Already JSON-safe, no need for additional conversion
+        return sess_dict
 
 
 @app.post("/sessions/")
@@ -214,30 +217,29 @@ def create_session(sess: SessIn):
         edge_rows.append((str(uuid.uuid4()), mid, sid, "belongs_to", None))
 
     try:
-        with db_connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SET app.current_user_id = %s", (sess.user_id,))
-                if node_rows:
-                    execute_values(
-                        cur,
-                        """
-                        INSERT INTO memories (id, kind, content, _metadata)
-                        VALUES %s
-                        ON CONFLICT (id) DO NOTHING
-                        """,
-                        node_rows,
-                    )
-                if edge_rows:
-                    execute_values(
-                        cur,
-                        """
-                        INSERT INTO memory_edges (id, source_id, target_id, relation)
-                        VALUES %s
-                        ON CONFLICT (source_id, target_id, relation) DO NOTHING
-                        """,
-                        edge_rows,
-                    )
-            conn.commit()
+        with db_cursor() as cur:
+            cur.execute("SET app.current_user_id = %s", (sess.user_id,))
+            if node_rows:
+                execute_values(
+                    cur,
+                    """
+                    INSERT INTO memories (id, kind, content, _metadata)
+                    VALUES %s
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    node_rows,
+                )
+            if edge_rows:
+                execute_values(
+                    cur,
+                    """
+                    INSERT INTO memory_edges (id, source_id, target_id, relation)
+                    VALUES %s
+                    ON CONFLICT (source_id, target_id, relation) DO NOTHING
+                    """,
+                    edge_rows,
+                )
+            cur.connection.commit()
     except Exception as e:
         raise HTTPException(400, str(e))
     return {"id": sid}
@@ -264,57 +266,56 @@ def fork_session(sid: str, body: ForkReq):
     now = datetime.now(timezone.utc).isoformat()
 
     try:
-        with db_connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SET app.current_user_id = %s", (user_id,))
-                # fetch parent session title
+        with db_cursor() as cur:
+            cur.execute("SET app.current_user_id = %s", (user_id,))
+            # fetch parent session title
+            cur.execute(
+                "SELECT content FROM memories WHERE id=%s AND kind='chat_session'",
+                (sid,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(404, "parent session not found")
+
+            if not forked_at:
+                # latest message id in parent session
                 cur.execute(
-                    "SELECT content FROM memories WHERE id=%s AND kind='chat_session'",
+                    """
+                    SELECT m.id
+                    FROM memory_edges e JOIN memories m ON m.id=e.target_id
+                    WHERE e.source_id=%s AND e.relation='has_message'
+                    ORDER BY (m._metadata->>'timestamp')::timestamptz DESC, m.id DESC
+                    LIMIT 1
+                    """,
                     (sid,),
                 )
-                row = cur.fetchone()
-                if not row:
-                    raise HTTPException(404, "parent session not found")
+                msg_row = cur.fetchone()
+                forked_at = msg_row[0] if msg_row else None
 
-                if not forked_at:
-                    # latest message id in parent session
-                    cur.execute(
-                        """
-                        SELECT m.id
-                        FROM memory_edges e JOIN memories m ON m.id=e.target_id
-                        WHERE e.source_id=%s AND e.relation='has_message'
-                        ORDER BY (m._metadata->>'timestamp')::timestamptz DESC, m.id DESC
-                        LIMIT 1
-                        """,
-                        (sid,),
-                    )
-                    msg_row = cur.fetchone()
-                    forked_at = msg_row[0] if msg_row else None
+            fork_meta = {
+                "user_id": user_id,
+                "created_at": now,
+                "forked_from": sid,
+                "forked_at": forked_at,
+            }
 
-                fork_meta = {
-                    "user_id": user_id,
-                    "created_at": now,
-                    "forked_from": sid,
-                    "forked_at": forked_at,
-                }
-
-                cur.execute(
-                    """
-                    INSERT INTO memories (id, kind, content, _metadata)
-                    VALUES (%s,'chat_session',%s,%s)
-                    """,
-                    (new_sid, row[0] + " (fork)", json.dumps(fork_meta)),
-                )
-                # child -> parent edge
-                cur.execute(
-                    """
-                    INSERT INTO memory_edges (id, source_id, target_id, relation)
-                    VALUES (%s,%s,%s,'forked_from')
-                    ON CONFLICT (source_id, target_id, relation) DO NOTHING
-                    """,
-                    (str(uuid.uuid4()), new_sid, sid),
-                )
-            conn.commit()
+            cur.execute(
+                """
+                INSERT INTO memories (id, kind, content, _metadata)
+                VALUES (%s,'chat_session',%s,%s)
+                """,
+                (new_sid, row[0] + " (fork)", json.dumps(fork_meta)),
+            )
+            # child -> parent edge
+            cur.execute(
+                """
+                INSERT INTO memory_edges (id, source_id, target_id, relation)
+                VALUES (%s,%s,%s,'forked_from')
+                ON CONFLICT (source_id, target_id, relation) DO NOTHING
+                """,
+                (str(uuid.uuid4()), new_sid, sid),
+            )
+            cur.connection.commit()
     except Exception as e:
         raise HTTPException(400, str(e))
     return {"id": new_sid, "forked_at": forked_at}
@@ -322,10 +323,10 @@ def fork_session(sid: str, body: ForkReq):
 @app.get("/sessions/{sid}/history")
 def session_history(sid: str):
     """Return messages for a session, recursively including parent sessions up to fork point."""
-    with db_cursor(cursor_factory=RealDictCursor) as cur:
-        history: List[dict] = []
-        cur_sid: Optional[str] = sid
-        forked_at: Optional[str] = None
+    with db_cursor() as cur:
+        history = []
+        cur_sid = sid
+        forked_at = None
         while cur_sid:
             # get parent link & fork point
             cur.execute(
@@ -343,12 +344,12 @@ def session_history(sid: str):
                 """,
                 (cur_sid,),
             )
-            msgs = cur.fetchall()
+            msgs = list(cur.safe_iter())
             if forked_at:
                 msgs = [m for m in msgs if m["id"] <= forked_at]
             history = msgs + history
-            if row and row["parent"]:
-                cur_sid, forked_at = row["parent"], row["fork_point"]
+            if row and row.get("parent"):
+                cur_sid, forked_at = row.get("parent"), row.get("fork_point")
             else:
                 break
         return history
