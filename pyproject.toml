@@ -21,6 +21,8 @@ dependencies = [
     "fastapi>=0.115.14",
     "jupyter>=1.1.1",
     "Faker>=13.3.0",
+    "python-multipart>=0.0.20",
+    "pytest>=8.4.1",
 ]
 
 [project.optional-dependencies]

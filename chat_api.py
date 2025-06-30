@@ -39,10 +39,11 @@ class SessIn(BaseModel):
 
 @app.post("/bulkload/")
 def bulkload(file: UploadFile = File(...)):
-    """Bulk load sessions/messages from JSON or JSONL file."""
-    ext = os.path.splitext(file.filename)[-1]
+    """Bulk load sessions/messages from a JSON array file. Ignores lines that are blank or start with //."""
     raw = file.file.read().decode()
-    data = json.loads(raw) if ext == ".json" else [json.loads(l) for l in raw.splitlines() if l.strip()]
+    # Remove comment lines and blank lines
+    filtered = '\n'.join(l for l in raw.splitlines() if l.strip() and not l.strip().startswith('//'))
+    data = json.loads(filtered)
     sess_rows, msg_rows = [], []
     now = datetime.utcnow().isoformat()
     for sess in data:
@@ -66,6 +67,46 @@ def bulkload(file: UploadFile = File(...)):
         return {"sessions_loaded": len(sess_rows), "messages_loaded": len(msg_rows)}
     except Exception as e:
         raise HTTPException(400, str(e))
+
+@app.post("/bulkload_records/")
+def bulkload_records(file: UploadFile = File(...)):
+    """Bulk load sessions/messages from a JSONL file, streaming one line at a time. Each line is a JSON object with a 'kind'."""
+    sess_rows, msg_rows = [], []
+    now = datetime.utcnow().isoformat()
+    for line in file.file:
+        try:
+            l = line.decode().strip()
+            if not l:
+                continue
+            obj = json.loads(l)
+        except Exception:
+            continue
+        kind = obj.get("kind")
+        if kind == "session":
+            sid = obj.get('id') or str(uuid.uuid4())
+            sess_rows.append((sid, obj.get('title',''), obj['user_id'], obj.get('forked_from'), obj.get('forked_at'), obj.get('created_at') or now, now))
+        elif kind == "message":
+            mid = obj.get('id') or str(uuid.uuid4())
+            msg_rows.append((mid, obj['session_id'], obj.get('role'), obj.get('content'), obj.get('timestamp') or now, obj.get('name'), json.dumps(obj.get('function_call')) if obj.get('function_call') else None))
+    try:
+        with psycopg2.connect(**DB) as conn:
+            with conn.cursor() as cur:
+                if sess_rows:
+                    execute_values(cur, """
+                        INSERT INTO chat_sessions (id, title, user_id, forked_from, forked_at, created_at, updated_at)
+                        VALUES %s
+                        ON CONFLICT (id) DO NOTHING
+                    """, sess_rows)
+                if msg_rows:
+                    execute_values(cur, """
+                        INSERT INTO chat_messages (id, session_id, role, content, timestamp, name, function_call)
+                        VALUES %s
+                        ON CONFLICT (id) DO NOTHING
+                    """, msg_rows)
+            conn.commit()
+    except Exception as e:
+        raise HTTPException(400, f"Bulk load records failed: {e}")
+    return {"sessions": len(sess_rows), "messages": len(msg_rows)}
 
 @app.get("/sessions/")
 def list_sessions():
