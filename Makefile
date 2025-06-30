@@ -84,3 +84,6 @@ up:: dn
 dn::
 down::
 	docker compose down -v
+
+chat_api::
+	uvicorn chat_api:app --reload
