@@ -13,7 +13,7 @@ from fastapi.encoders import jsonable_encoder
 
 from db_connect import db_cursor
 
-__all__ = ["json_safe", "query_dicts", "iter_query_dicts", "unflatten_row"]
+__all__ = ["json_safe", "unflatten_row"]
 
 # --- custom encoder ---------------------------------------------------
 _CUSTOM_ENCODERS = {
@@ -36,9 +36,6 @@ def json_safe(data: Any):
     """Return a JSON-serialisable version of *data* using FastAPI's encoder."""
     return jsonable_encoder(data, custom_encoder=_CUSTOM_ENCODERS)
 
-def row_to_dict(row: Dict[str, Any]) -> Dict[str, Any]:
-    """Just JSON-encode the flattened row (cursor already flattened)."""
-    return json_safe(row)
 
 def unflatten_row(d: Dict[str, Any], *, meta_fields: set[str] | None = None) -> Dict[str, Any]:
     """Given a *flattened* dict (metadata keys promoted), roll them back under `_metadata`.
@@ -67,17 +64,3 @@ def unflatten_row(d: Dict[str, Any], *, meta_fields: set[str] | None = None) -> 
     if meta:
         data["_metadata"] = meta
     return data
-
-def query_dicts(sql: str, params: Iterable | None = None):
-    """Run SQL and return list[dict] already JSON-safe."""
-    with db_cursor() as cur:
-        cur.execute(sql, params or ())
-        return [row_to_dict(row) for row in cur.fetchall()]
-
-def iter_query_dicts(sql: str, params: Iterable | None = None):
-    """Yield JSON-safe dicts one-by-one (streaming)."""
-    params = params or ()
-    with db_cursor() as cur:
-        cur.execute(sql, params)
-        for row in cur:  # AppCursor flattens
-            yield row_to_dict(row)
