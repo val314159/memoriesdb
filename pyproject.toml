@@ -1,6 +1,6 @@
 [project]
 name = "memoriesdb"
-version = "0.1.2"
+version = "0.2.0"
 description = "MemoriesDB, a graph/vector/neural database"
 readme = "README.md"
 authors = [
@@ -16,6 +16,9 @@ dependencies = [
     "gevent-websocket>=0.10.1",
     "websocket-client>=1.8.0",
     "bottle-dev>=0.13.2",
+    "uvicorn>=0.35.0",
+    "httpx>=0.28.1",
+    "fastapi>=0.115.14",
 ]
 
 [project.optional-dependencies]

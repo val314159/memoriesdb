@@ -12,6 +12,40 @@ API = os.getenv("CHAT_API_URL", "http://localhost:8000")
 USER1 = os.getenv("TEST_USER1", "00000000-0000-0000-0000-000000000001")
 USER2 = os.getenv("TEST_USER2", "00000000-0000-0000-0000-000000000002")
 
+TESTDATA = os.path.join(os.path.dirname(__file__), "test_data", "chat_sessions.json")
+
+import json
+
+def test_bulkload_sessions(client):
+    # Count sessions/messages in test file
+    with open(TESTDATA, "r") as f:
+        try:
+            data = json.load(f)
+        except Exception:
+            # Strip comments for JSONC
+            lines = [l for l in f if not l.strip().startswith('//')]
+            data = json.loads(''.join(lines))
+    expected_sessions = len(data)
+    expected_messages = sum(len(sess.get('messages', [])) for sess in data)
+    # Upload file
+    with open(TESTDATA, "rb") as f2:
+        files = {"file": ("chat_sessions.json", f2, "application/json")}
+        r = client.post("/bulkload/", files=files)
+        assert r.status_code == 200 or r.status_code == 201
+    # Check sessions
+    r2 = client.get("/sessions/")
+    assert r2.status_code == 200
+    session_ids = [s["id"] for s in r2.json()]
+    found = [s for s in session_ids if s.startswith("sess_")]
+    assert len(found) >= expected_sessions
+    # Check messages for one session
+    r3 = client.get(f"/sessions/{data[0]['id']}/messages/")
+    assert r3.status_code == 200
+    msgs = r3.json()
+    assert len(msgs) == len(data[0]['messages'])
+    # Check specific content
+    assert any("AI alignment" in m["content"] for m in msgs)
+
 @pytest.fixture(scope="module")
 def client():
     with httpx.Client(base_url=API) as c:
