@@ -112,118 +112,226 @@ def bulkload(file: UploadFile = File(...)):
 
 # --- Chat sessions stored as graph nodes/edges -----------------------------
 # A session is a node in `memories` with kind='chat_session'.
-# Each chat message is a node with kind='chat_message'.
 # Edges:
 #   session --(in_session)-> message
 #   child_session --(forked_from)-> parent_session
 # The JSON metadata of each node keeps the original fields.
 
-# Utility helpers -----------------------------------------------------------
-
-def _dictfetch(cur):
-    """Return list[dict] from cursor."""
-    cols = [c[0] for c in cur.description]
-    return [dict(zip(cols, r)) for r in cur.fetchall()]
-
+# --------------------------------------------------------------------------
+# Chat sessions/messages represented inside the **graph tables**
+# --------------------------------------------------------------------------
+#  - Session node   -> memories.kind = 'chat_session'
+#  - Message node   -> memories.kind = 'chat_message'
+#  - Edge relation  :  session -(has_message)-> message
+#  - Fork relation  :  child_session -(forked_from)-> parent_session
 # --------------------------------------------------------------------------
 
 @app.get("/sessions/")
-def list_sessions():
-    """Return most recent chat sessions (kind='chat_session')."""
+def list_sessions(limit: int = 100):
+    """Return recent chat sessions sorted by `created_at`."""
     q = """
     SELECT id,
-           content                AS title,
-           (_metadata->>'user_id')       AS user_id,
-           (_metadata->>'created_at')    AS created_at,
-           (_metadata->>'forked_from')   AS forked_from,
-           (_metadata->>'forked_at')     AS forked_at
+           content                    AS title,
+           (_metadata->>'user_id')    AS user_id,
+           (_metadata->>'created_at') AS created_at,
+           (_metadata->>'forked_from') AS forked_from,
+           (_metadata->>'forked_at')   AS forked_at
     FROM memories
     WHERE kind = 'chat_session'
     ORDER BY (_metadata->>'created_at')::timestamptz DESC
-    LIMIT 100
+    LIMIT %s
     """
-    with db_connect(cursor_factory=RealDictCursor) as conn:
-        with conn.cursor() as cur:
-            cur.execute(q)
-            rows = cur.fetchall()
-            return rows
+    with db_cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(q, (limit,))
+        return cur.fetchall()
+
 
 @app.get("/sessions/{sid}")
 def get_session(sid: str):
-    with db_connect(cursor_factory=RealDictCursor) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM chat_sessions WHERE id=%s", (sid,))
-            sess = cur.fetchone()
-            if not sess:
-                raise HTTPException(404, "not found")
-            cur.execute("SELECT * FROM chat_messages WHERE session_id=%s ORDER BY created_at", (sid,))
-            sess['messages'] = cur.fetchall()
-            return sess
+    """Return a session node plus its messages (via `in_session` edges)."""
+    with db_cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("SELECT * FROM memories WHERE id=%s AND kind='chat_session'", (sid,))
+        sess = cur.fetchone()
+        if not sess:
+            raise HTTPException(404, "not found")
+        cur.execute(
+            """
+            SELECT m.*
+            FROM memory_edges e
+            JOIN memories m ON m.id = e.target_id
+            WHERE e.source_id = %s AND e.relation = 'has_message'
+            ORDER BY (m._metadata->>'timestamp')::timestamptz, m.id
+            """,
+            (sid,),
+        )
+        sess["messages"] = cur.fetchall()
+        return sess
+
 
 @app.post("/sessions/")
 def create_session(sess: SessIn):
     sid = sess.id or str(uuid.uuid4())
     now = sess.created_at or datetime.utcnow().isoformat()
+
+    session_meta = {
+        "user_id": sess.user_id,
+        "created_at": now,
+        "forked_from": sess.forked_from,
+        "forked_at": sess.forked_at,
+    }
+
+    node_rows = [(sid, "chat_session", sess.title or "", json.dumps(session_meta))]
+    edge_rows = []
+
+    # Prepare message nodes and has_message / belongs_to edges
+    for m in sess.messages:
+        mid = m.id or str(uuid.uuid4())
+        m_meta = {
+            "role": m.role,
+            "timestamp": m.timestamp or now,
+            "name": m.name,
+            "function_call": m.function_call,
+        }
+        node_rows.append((mid, "chat_message", m.content, json.dumps(m_meta)))
+        edge_rows.append((str(uuid.uuid4()), sid, mid, "has_message", None))
+        edge_rows.append((str(uuid.uuid4()), mid, sid, "belongs_to", None))
+
     try:
         with db_connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SET app.current_user_id = %s", (sess.user_id,))
-                cur.execute("""
-                    INSERT INTO chat_sessions (id, title, user_id, forked_from, forked_at, created_at, updated_at)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s)
-                """, (sid, sess.title or '', sess.user_id, sess.forked_from, sess.forked_at, now, now))
-                for m in sess.messages:
-                    mid = m.id or str(uuid.uuid4())
-                    cur.execute("""
-                        INSERT INTO chat_messages (id, session_id, role, content, created_at, name, function_call)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s)
-                    """, (mid, sid, m.role, m.content, m.timestamp or now, m.name, json.dumps(m.function_call) if m.function_call else None))
-        return {"id": sid}
+                if node_rows:
+                    execute_values(
+                        cur,
+                        """
+                        INSERT INTO memories (id, kind, content, _metadata)
+                        VALUES %s
+                        ON CONFLICT (id) DO NOTHING
+                        """,
+                        node_rows,
+                    )
+                if edge_rows:
+                    execute_values(
+                        cur,
+                        """
+                        INSERT INTO memory_edges (id, source_id, target_id, relation)
+                        VALUES %s
+                        ON CONFLICT (source_id, target_id, relation) DO NOTHING
+                        """,
+                        edge_rows,
+                    )
+            conn.commit()
     except Exception as e:
         raise HTTPException(400, str(e))
+    return {"id": sid}
+
+
+class ForkReq(BaseModel):
+    user_id: str
+    forked_at: Optional[str] = None
 
 @app.post("/sessions/{sid}/fork")
-def fork_session(sid: str, forked_at: Optional[str] = None, user_id: str = "00000000-0000-0000-0000-000000000001"):
+def fork_session(sid: str, body: ForkReq):
+    """Create a child session node and connect it via `forked_from`.
+
+    Parameters
+    ---
+    sid : str
+        Parent session ID.
+    user_id : str
+    """
+    user_id = body.user_id
+    forked_at = body.forked_at
+
     new_sid = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
+
     try:
         with db_connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SET app.current_user_id = %s", (user_id,))
-                cur.execute("SELECT title FROM chat_sessions WHERE id=%s", (sid,))
+                # fetch parent session title
+                cur.execute(
+                    "SELECT content FROM memories WHERE id=%s AND kind='chat_session'",
+                    (sid,),
+                )
                 row = cur.fetchone()
                 if not row:
-                    raise HTTPException(404, "not found")
+                    raise HTTPException(404, "parent session not found")
+
                 if not forked_at:
-                    # Get latest message id in parent session
-                    cur.execute("SELECT id FROM chat_messages WHERE session_id=%s ORDER BY created_at DESC, id DESC LIMIT 1", (sid,))
+                    # latest message id in parent session
+                    cur.execute(
+                        """
+                        SELECT m.id
+                        FROM memory_edges e JOIN memories m ON m.id=e.target_id
+                        WHERE e.source_id=%s AND e.relation='has_message'
+                        ORDER BY (m._metadata->>'timestamp')::timestamptz DESC, m.id DESC
+                        LIMIT 1
+                        """,
+                        (sid,),
+                    )
                     msg_row = cur.fetchone()
                     forked_at = msg_row[0] if msg_row else None
-                cur.execute("""
-                    INSERT INTO chat_sessions (id, title, user_id, forked_from, forked_at, created_at, updated_at)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s)
-                """, (new_sid, row[0] + " (fork)", user_id, sid, forked_at, now, now))
-        return {"id": new_sid, "forked_at": forked_at}
+
+                fork_meta = {
+                    "user_id": user_id,
+                    "created_at": now,
+                    "forked_from": sid,
+                    "forked_at": forked_at,
+                }
+
+                cur.execute(
+                    """
+                    INSERT INTO memories (id, kind, content, _metadata)
+                    VALUES (%s,'chat_session',%s,%s)
+                    """,
+                    (new_sid, row[0] + " (fork)", json.dumps(fork_meta)),
+                )
+                # child -> parent edge
+                cur.execute(
+                    """
+                    INSERT INTO memory_edges (id, source_id, target_id, relation)
+                    VALUES (%s,%s,%s,'forked_from')
+                    ON CONFLICT (source_id, target_id, relation) DO NOTHING
+                    """,
+                    (str(uuid.uuid4()), new_sid, sid),
+                )
+            conn.commit()
     except Exception as e:
         raise HTTPException(400, str(e))
+    return {"id": new_sid, "forked_at": forked_at}
 
 @app.get("/sessions/{sid}/history")
 def session_history(sid: str):
-    """Get all messages in a session, including inherited from forks up to fork point."""
-    with db_connect(cursor_factory=RealDictCursor) as conn:
-        with conn.cursor() as cur:
-            history = []
-            cur_sid, forked_at = sid, None
-            while cur_sid:
-                cur.execute("SELECT forked_from, forked_at FROM chat_sessions WHERE id=%s", (cur_sid,))
-                row = cur.fetchone()
-                cur.execute("SELECT * FROM chat_messages WHERE session_id=%s ORDER BY created_at", (cur_sid,))
-                msgs = cur.fetchall()
-                if forked_at:
-                    msgs = [m for m in msgs if m['id'] and m['id'] <= forked_at]
-                history = msgs + history
-                if row and row['forked_from']:
-                    cur_sid, forked_at = row['forked_from'], row['forked_at']
-                else:
-                    break
-            return history
+    """Return messages for a session, recursively including parent sessions up to fork point."""
+    with db_cursor(cursor_factory=RealDictCursor) as cur:
+        history: List[dict] = []
+        cur_sid: Optional[str] = sid
+        forked_at: Optional[str] = None
+        while cur_sid:
+            # get parent link & fork point
+            cur.execute(
+                "SELECT (_metadata->>'forked_from') AS parent, (_metadata->>'forked_at') AS fork_point FROM memories WHERE id=%s",
+                (cur_sid,),
+            )
+            row = cur.fetchone()
+            # fetch messages for current session
+            cur.execute(
+                """
+                SELECT m.*
+                FROM memory_edges e JOIN memories m ON m.id=e.target_id
+                WHERE e.source_id=%s AND e.relation='has_message'
+                ORDER BY (m._metadata->>'timestamp')::timestamptz, m.id
+                """,
+                (cur_sid,),
+            )
+            msgs = cur.fetchall()
+            if forked_at:
+                msgs = [m for m in msgs if m["id"] <= forked_at]
+            history = msgs + history
+            if row and row["parent"]:
+                cur_sid, forked_at = row["parent"], row["fork_point"]
+            else:
+                break
+        return history
