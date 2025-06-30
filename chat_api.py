@@ -78,16 +78,33 @@ def bulkload(file: UploadFile = File(...)):
         # Insert node into memories
         content = obj.get("content", obj.get("title", ""))
         node_rows.append((node_id, kind, content, json.dumps({k:v for k,v in obj.items() if k not in reserved})))
-        # Insert edges for any dict-valued, non-reserved property
+        # Insert edges for any dict-valued or array-of-dicts valued, non-reserved property
         for k, v in obj.items():
-            if k in reserved or not isinstance(v, dict):
+            if k in reserved:
                 continue
-            relation = k
-            source_id = v.get("source_id", node_id)
-            target_id = v.get("target_id", node_id)
-            # Remove source_id/target_id/relation from metadata
-            meta = {kk:vv for kk,vv in v.items() if kk not in ("source_id","target_id","relation")}
-            edge_rows.append((str(uuid.uuid4()), source_id, target_id, relation, meta and json.dumps(meta) or None))
+                
+            # Handle single dictionary case
+            if isinstance(v, dict):
+                relation = k
+                source_id = v.get("source_id", node_id)
+                target_id = v.get("target_id", node_id)
+                # Remove source_id/target_id/relation from metadata
+                meta = {kk:vv for kk,vv in v.items() if kk not in ("source_id","target_id","relation")}
+                edge_rows.append((str(uuid.uuid4()), source_id, target_id, relation, meta and json.dumps(meta) or None))
+                
+            # Handle array of dictionaries case
+            elif isinstance(v, list):
+                for edge_obj in v:
+                    if not isinstance(edge_obj, dict):
+                        continue
+                    relation = edge_obj.get("relation", k)
+                    source_id = edge_obj.get("source_id", node_id)
+                    target_id = edge_obj.get("target_id")
+                    if not target_id:  # Skip edges without target
+                        continue
+                    # Remove source_id/target_id/relation from metadata
+                    meta = {kk:vv for kk,vv in edge_obj.items() if kk not in ("source_id","target_id","relation")}
+                    edge_rows.append((str(uuid.uuid4()), source_id, target_id, relation, meta and json.dumps(meta) or None))
     try:
         with db_connect() as conn:
             with conn.cursor() as cur:

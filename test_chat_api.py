@@ -320,6 +320,99 @@ def test_bulkload_graph(client):
     
     finally:
         # Clean up
-        if os.path.exists(filename):
-            os.unlink(filename)
+        if filename and os.path.exists(filename):
+            os.remove(filename)
 
+def test_bulkload_graph_with_edge_array(client):
+    """Test bulkloading graph with array-based edge definitions"""
+    # Create unique test data
+    session_id = str(uuid.uuid4())
+    message_ids = [str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())]
+    user_id = "00000000-0000-0000-0000-000000000000"  # Use system user
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Prepare test data - a session node with edges array
+    session_node_with_edges = {
+        "id": session_id,
+        "kind": "chat_session",
+        "title": "Session With Edge Arrays",
+        "user_id": user_id,
+        "created_at": now,
+        # Array of edges under the "edges" property
+        "edges": [
+            {
+                "relation": "has_message",
+                "source_id": session_id,
+                "target_id": message_ids[0]
+            },
+            {
+                "relation": "has_message",
+                "source_id": session_id,
+                "target_id": message_ids[1]
+            },
+            {
+                "relation": "has_message",
+                "source_id": session_id,
+                "target_id": message_ids[2]
+            }
+        ]
+    }
+    
+    # Create message nodes
+    message_nodes = [
+        {
+            "id": message_ids[0],
+            "kind": "chat_message",
+            "content": "First message",
+            "role": "system",
+            "timestamp": now
+        },
+        {
+            "id": message_ids[1],
+            "kind": "chat_message",
+            "content": "Second message",
+            "role": "user",
+            "timestamp": now
+        },
+        {
+            "id": message_ids[2],
+            "kind": "chat_message",
+            "content": "Third message",
+            "role": "assistant",
+            "timestamp": now
+        }
+    ]
+    
+    # Create temporary file
+    filename = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as f:
+            # Write to JSONL file (one JSON object per line)
+            f.write(json.dumps(session_node_with_edges).encode("utf-8") + b"\n")
+            for message_node in message_nodes:
+                f.write(json.dumps(message_node).encode("utf-8") + b"\n")
+            filename = f.name
+        
+        # Upload the file
+        with open(filename, "rb") as upload_file:
+            response = client.post(
+                "/bulkload/",
+                files={"file": ("test.jsonl", upload_file)}
+            )
+        
+        print(f"Bulkload with edge arrays response: {response.status_code} - {response.text}")
+        assert response.status_code == 200
+        
+        # For this test, we're mainly interested in verifying that the bulkload endpoint
+        # successfully handled the array of edges, which we can tell from the successful
+        # response that reported 4 nodes (1 session + 3 messages) and 3 edges created.
+        
+        # Parse the bulkload response to verify the correct number of nodes and edges
+        response_data = response.json()
+        assert response_data.get("nodes") == 4, "Should have created 4 nodes"
+        assert response_data.get("edges") == 3, "Should have created 3 edges"
+        
+    finally:
+        # Cleanup temporary file
+        if filename and os.path.exists(filename):
+            os.remove(filename)
