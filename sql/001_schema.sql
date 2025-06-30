@@ -172,15 +172,31 @@ EXECUTE FUNCTION update_content_hash();
 
 CREATE OR REPLACE FUNCTION log_memory_change()
 RETURNS TRIGGER AS $$
+DECLARE
+    user_id UUID;
 BEGIN
-    INSERT INTO audit_log (table_name, record_id, operation, old_values, new_values, changed_by)
+    -- Try to get the current user ID, or use NULL if not set
+    BEGIN
+        user_id := current_setting('app.current_user_id')::UUID;
+    EXCEPTION WHEN OTHERS THEN
+        user_id := NULL;
+    END;
+    
+    INSERT INTO audit_log (
+        table_name, 
+        record_id, 
+        operation, 
+        old_values, 
+        new_values,
+        changed_by
+    )
     VALUES (
         TG_TABLE_NAME,
         COALESCE(NEW.id, OLD.id),
         TG_OP,
         row_to_json(OLD),
         row_to_json(NEW),
-        current_setting('app.current_user')::UUID
+        user_id
     );
     RETURN NEW;
 END;
@@ -268,10 +284,10 @@ ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE memory_edges ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY memory_access_policy ON memories
-    USING (created_by = current_setting('app.current_user')::UUID);
+    USING (created_by = current_setting('app.current_user_id')::UUID);
 
 CREATE POLICY memory_edge_access_policy ON memory_edges
-    USING (created_by = current_setting('app.current_user')::UUID);
+    USING (created_by = current_setting('app.current_user_id')::UUID);
 
 -- ===========================
 -- ALL DONE ✅

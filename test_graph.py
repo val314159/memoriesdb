@@ -31,15 +31,34 @@ class GraphDB:
         self.conn = psycopg2.connect(**DB_CONFIG)
         self.conn.autocommit = True
         self.user_id = self._get_or_create_user()
-        self._set_current_user()
+        # Set the current user for this connection
+        self._ensure_session_variables()
+    
+    def _ensure_session_variables(self):
+        """Ensure all required session variables are set."""
+        with self.conn.cursor() as cur:
+            # Set a default user ID if not set
+            cur.execute("""
+                DO $$
+                BEGIN
+                    -- Set a default value if not already set
+                    IF current_setting('app.current_user_id', true) IS NULL THEN
+                        PERFORM set_config('app.current_user_id', '00000000-0000-0000-0000-000000000000', true);
+                    END IF;
+                EXCEPTION WHEN undefined_object THEN
+                    -- Parameter doesn't exist yet, create it
+                    PERFORM set_config('app.current_user_id', '00000000-0000-0000-0000-000000000000', true);
+                END $$;
+            """)
+            # Now set the actual user ID
+            self._set_current_user()
         
     def _set_current_user(self):
         """Set the current user in the session for audit triggers."""
         with self.conn.cursor() as cur:
-            cur.execute(f"SET LOCAL app.current_user = '{self.user_id}';")
-        # Note: This sets it for the current transaction only
-        # For persistent setting, use: cur.execute(f"SET app.current_user = '{self.user_id}';")
-        # But be cautious with connection pooling
+            # Set the session variable for this connection
+            # The 'true' parameter makes it persist for the session
+            cur.execute("SET app.current_user_id = %s", (str(self.user_id),))
         
     def _get_or_create_user(self):
         """Get or create a test user."""
