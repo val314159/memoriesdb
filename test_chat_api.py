@@ -3,12 +3,14 @@
 Test suite for chat_api.py (session/message/fork logic, including forked_at defaulting).
 Uses httpx and pytest for API calls and assertions.
 """
-import pytest, uuid
+import pytest, uuid, os
 import httpx
+from dotenv import load_dotenv
 
-API = "http://localhost:8000"
-USER1 = "00000000-0000-0000-0000-000000000001"
-USER2 = "00000000-0000-0000-0000-000000000002"
+load_dotenv()
+API = os.getenv("CHAT_API_URL", "http://localhost:8000")
+USER1 = os.getenv("TEST_USER1", "00000000-0000-0000-0000-000000000001")
+USER2 = os.getenv("TEST_USER2", "00000000-0000-0000-0000-000000000002")
 
 @pytest.fixture(scope="module")
 def client():

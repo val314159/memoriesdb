@@ -1,29 +1,30 @@
 [project]
 name = "memoriesdb"
 version = "0.1.2"
-description = "Add your description here"
+description = "MemoriesDB, a graph/vector/neural database"
 readme = "README.md"
 authors = [
     { name = "@val315159", email = "jmward@gmail.com" }
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "bottle-dev>=0.13.2",
-    "dotenv>=0.9.9",
-    "gevent-websocket>=0.10.1",
+    "python-dotenv>=0.19.0",
     "honcho>=2.0.0",
     "ollama>=0.5.1",
     "pgvector>=0.4.1",
     "psycopg2-binary>=2.9.10",
+    "gevent-websocket>=0.10.1",
     "websocket-client>=1.8.0",
+    "bottle-dev>=0.13.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter>=1.1.1",
+    "uv>=0.7.12",
+    "Faker>=13.3.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[dependency-groups]
-dev = [
-    "jupyter>=1.1.1",
-    "uv>=0.7.12",
-]
