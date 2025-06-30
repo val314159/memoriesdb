@@ -37,17 +37,74 @@ class SessIn(BaseModel):
     created_at: Optional[str]=None
     messages: List[MsgIn]=[]
 
+def json_safe(val):
+    if val is None:
+        return None
+    elif isinstance(val, uuid.UUID):
+        return str(val)
+    elif isinstance(val, bytes):
+        return str(val)
+    elif isinstance(val, dict):
+        return {k: json_safe(v) for k, v in val.items()}
+    elif isinstance(val, list):
+        return [json_safe(v) for v in val]
+    else:
+        return val
+
+def json_safe_row(row):
+    if row is None:
+        return None
+    return {k: json_safe(v) for k, v in dict(row).items()}
+
 @app.get("/memories/")
 def list_memories(limit: int = 100, offset: int = 0):
     with psycopg2.connect(**DB) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute("SELECT * FROM memories ORDER BY created_at DESC NULLS LAST LIMIT %s OFFSET %s", (limit, offset))
-        return cur.fetchall()
+        cur.execute("SELECT * FROM memories ORDER BY id DESC LIMIT %s OFFSET %s", (limit, offset))
+        rows = cur.fetchall()
+        
+        # Direct conversion handling memoryview objects
+        result = []
+        for row in rows:
+            safe_row = {}
+            for k, v in row.items():
+                if isinstance(v, uuid.UUID):
+                    safe_row[k] = str(v)
+                elif isinstance(v, memoryview):
+                    safe_row[k] = "binary_data"  # Replace with a placeholder
+                elif isinstance(v, bytes):
+                    safe_row[k] = "binary_data"  # Replace with a placeholder
+                elif isinstance(v, dict):
+                    # Handle JSONB fields
+                    safe_row[k] = json.loads(json.dumps(v))
+                else:
+                    safe_row[k] = v
+            result.append(safe_row)
+        return result
 
 @app.get("/edges/")
 def list_edges(limit: int = 100, offset: int = 0):
     with psycopg2.connect(**DB) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SELECT * FROM memory_edges ORDER BY id DESC LIMIT %s OFFSET %s", (limit, offset))
-        return cur.fetchall()
+        rows = cur.fetchall()
+        
+        # Direct conversion handling memoryview objects
+        result = []
+        for row in rows:
+            safe_row = {}
+            for k, v in row.items():
+                if isinstance(v, uuid.UUID):
+                    safe_row[k] = str(v)
+                elif isinstance(v, memoryview):
+                    safe_row[k] = "binary_data"  # Replace with a placeholder
+                elif isinstance(v, bytes):
+                    safe_row[k] = "binary_data"  # Replace with a placeholder
+                elif isinstance(v, dict):
+                    # Handle JSONB fields
+                    safe_row[k] = json.loads(json.dumps(v))
+                else:
+                    safe_row[k] = v
+            result.append(safe_row)
+        return result
 
 @app.post("/bulkload/")
 def bulkload(file: UploadFile = File(...)):

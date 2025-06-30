@@ -19,12 +19,11 @@ import json
 def test_bulkload_sessions(client):
     # Count sessions/messages in test file
     with open(TESTDATA, "r") as f:
-        try:
-            data = json.load(f)
-        except Exception:
-            # Strip comments for JSONC
-            lines = [l for l in f if not l.strip().startswith('//')]
-            data = json.loads(''.join(lines))
+        content = f.read()
+        # Strip comments for JSONC
+        import re
+        content = re.sub(r'\s*//.*?\n', '\n', content)
+        data = json.loads(content)
     expected_sessions = len(data)
     expected_messages = sum(len(sess.get('messages', [])) for sess in data)
     # Upload file

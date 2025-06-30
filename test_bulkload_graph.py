@@ -35,7 +35,7 @@ def test_bulkload_graph(client):
         assert "id" in sample_node and uuid.UUID(sample_node["id"])
 
     # Check edge count in DB via API (if available)
-    r3 = client.get("/memory_edges/")
+    r3 = client.get("/edges/")
     if r3.status_code == 200:
         edges = r3.json()
         assert len(edges) == 23
