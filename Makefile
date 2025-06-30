@@ -25,6 +25,11 @@ realclean:: clean
 
 oldtest:: api
 
+test:
+	pytest test_bulkload_graph.py
+	pytest test_list_api.py
+	pytest test_chat_api.py
+
 .venv:
 	uv sync
 
