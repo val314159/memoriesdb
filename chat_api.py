@@ -39,39 +39,9 @@ class SessIn(BaseModel):
 
 @app.post("/bulkload/")
 def bulkload(file: UploadFile = File(...)):
-    """Bulk load sessions/messages from a JSON array file. Ignores lines that are blank or start with //."""
-    raw = file.file.read().decode()
-    # Remove comment lines and blank lines
-    filtered = '\n'.join(l for l in raw.splitlines() if l.strip() and not l.strip().startswith('//'))
-    data = json.loads(filtered)
-    sess_rows, msg_rows = [], []
-    now = datetime.utcnow().isoformat()
-    for sess in data:
-        sid = sess.get('id') or str(uuid.uuid4())
-        sess_rows.append((sid, sess.get('title',''), sess['user_id'], sess.get('forked_from'), sess.get('forked_at'), sess.get('created_at') or now, now))
-        for m in sess.get('messages', []):
-            mid = m.get('id') or str(uuid.uuid4())
-            msg_rows.append((mid, sid, m.get('role'), m.get('content'), m.get('timestamp') or now, m.get('name'), json.dumps(m.get('function_call')) if m.get('function_call') else None))
-    try:
-        with psycopg2.connect(**DB) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SET app.current_user_id = '00000000-0000-0000-0000-000000000001'")
-                execute_values(cur, """
-                    INSERT INTO chat_sessions (id, title, user_id, forked_from, forked_at, created_at, updated_at)
-                    VALUES %s ON CONFLICT (id) DO NOTHING
-                """, sess_rows)
-                execute_values(cur, """
-                    INSERT INTO chat_messages (id, session_id, role, content, created_at, name, function_call)
-                    VALUES %s ON CONFLICT (id) DO NOTHING
-                """, msg_rows)
-        return {"sessions_loaded": len(sess_rows), "messages_loaded": len(msg_rows)}
-    except Exception as e:
-        raise HTTPException(400, str(e))
-
-@app.post("/bulkload_records/")
-def bulkload_records(file: UploadFile = File(...)):
-    """Bulk load sessions/messages from a JSONL file, streaming one line at a time. Each line is a JSON object with a 'kind'."""
-    sess_rows, msg_rows = [], []
+    """Bulk load nodes and edges from a JSONL file with edge objects (property-name-as-relation)."""
+    reserved = {"kind", "id", "title", "user_id", "created_at", "role", "content", "timestamp", "name", "function_call"}
+    node_rows, edge_rows = [], []
     now = datetime.utcnow().isoformat()
     for line in file.file:
         try:
@@ -81,32 +51,42 @@ def bulkload_records(file: UploadFile = File(...)):
             obj = json.loads(l)
         except Exception:
             continue
+        node_id = obj.get("id") or str(uuid.uuid4())
         kind = obj.get("kind")
-        if kind == "session":
-            sid = obj.get('id') or str(uuid.uuid4())
-            sess_rows.append((sid, obj.get('title',''), obj['user_id'], obj.get('forked_from'), obj.get('forked_at'), obj.get('created_at') or now, now))
-        elif kind == "message":
-            mid = obj.get('id') or str(uuid.uuid4())
-            msg_rows.append((mid, obj['session_id'], obj.get('role'), obj.get('content'), obj.get('timestamp') or now, obj.get('name'), json.dumps(obj.get('function_call')) if obj.get('function_call') else None))
+        # Insert node into memories
+        content = obj.get("content", obj.get("title", ""))
+        node_rows.append((node_id, kind, content, json.dumps({k:v for k,v in obj.items() if k not in reserved})))
+        # Insert edges for any dict-valued, non-reserved property
+        for k, v in obj.items():
+            if k in reserved or not isinstance(v, dict):
+                continue
+            relation = k
+            source_id = v.get("source_id", node_id)
+            target_id = v.get("target_id", node_id)
+            # Remove source_id/target_id/relation from metadata
+            meta = {kk:vv for kk,vv in v.items() if kk not in ("source_id","target_id","relation")}
+            edge_rows.append((str(uuid.uuid4()), source_id, target_id, relation, meta and json.dumps(meta) or None))
     try:
         with psycopg2.connect(**DB) as conn:
             with conn.cursor() as cur:
-                if sess_rows:
+                cur.execute("SET app.current_user_id = '00000000-0000-0000-0000-000000000001'")
+                if node_rows:
                     execute_values(cur, """
-                        INSERT INTO chat_sessions (id, title, user_id, forked_from, forked_at, created_at, updated_at)
+                        INSERT INTO memories (id, kind, content, _metadata)
                         VALUES %s
                         ON CONFLICT (id) DO NOTHING
-                    """, sess_rows)
-                if msg_rows:
+                    """, node_rows)
+                if edge_rows:
                     execute_values(cur, """
-                        INSERT INTO chat_messages (id, session_id, role, content, timestamp, name, function_call)
+                        INSERT INTO memory_edges (id, source_id, target_id, relation, _metadata)
                         VALUES %s
-                        ON CONFLICT (id) DO NOTHING
-                    """, msg_rows)
+                        ON CONFLICT (source_id, target_id, relation) DO NOTHING
+                    """, edge_rows)
             conn.commit()
     except Exception as e:
         raise HTTPException(400, f"Bulk load records failed: {e}")
-    return {"sessions": len(sess_rows), "messages": len(msg_rows)}
+    return {"nodes": len(node_rows), "edges": len(edge_rows)}
+
 
 @app.get("/sessions/")
 def list_sessions():

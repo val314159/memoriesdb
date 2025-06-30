@@ -298,3 +298,6 @@ CREATE POLICY memory_edge_access_policy ON memory_edges
 -- ===========================
 -- ALL DONE ✅
 -- ===========================
+
+-- Insert system/null user for audit triggers
+INSERT INTO users (id, email) VALUES ('00000000-0000-0000-0000-000000000001', 'system@localhost') ON CONFLICT DO NOTHING;
