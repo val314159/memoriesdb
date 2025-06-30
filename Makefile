@@ -50,35 +50,22 @@ pgvector-wait::
 		sleep 1; \
 	done
 	@echo "\nPostgreSQL is ready!"
-
 pgvector-restart:: pgvector-stop pgvector-start
 memories-restart:: memories-stop memories-start
-pgvector-stop::
-	docker rm -f pgvector
-pgvector-start::
-	docker run  -d $V
-pgvector-run::
-	docker run -it $V
-memories-stop::
-	docker rm -f memories
-memories-start::
-	docker build   .   --tag memories
-	docker run   -d $M
-memories-run::
-	docker build   .   --tag memories
-	docker run -it $M
-
+pgvector-rerun::   pgvector-stop pgvector-run
+memories-rerun::   memories-stop memories-run
+pgvector-stop::   ; docker rm -f pgvector
+memories-stop::   ; docker rm -f memories
+pgvector-start::  ;                                 docker run  -d $V
+pgvector-run::    ;                                 docker run -it $V
+memories-start::  ; docker build . --tag memories ; docker run  -d $M
+memories-run::    ; docker build . --tag memories ; docker run -it $M
 run-llm::
 	. .venv/bin/activate && PYTHONPATH=. honcho start -f examples/llm.Procfile
-
 chat::
 	uv run -m memoriesdb.chat
-
 hub::
 	uv run -m memoriesdb.hub
-
-
-
 
 prune::
 	docker compose down -v
