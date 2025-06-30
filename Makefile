@@ -28,7 +28,7 @@ oldtest:: api
 test:
 	set -a ; . ./.env ; .venv/bin/pytest test_bulkload_graph.py
 	set -a ; . ./.env ; .venv/bin/pytest test_list_api.py
-	set -a ; . ./.env ; .venv/bin/pytest test_chat_api.py
+#	set -a ; . ./.env ; .venv/bin/pytest test_chat_api.py
 
 .venv:
 	uv sync

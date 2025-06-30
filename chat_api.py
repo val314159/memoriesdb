@@ -158,12 +158,43 @@ def bulkload(file: UploadFile = File(...)):
     return {"nodes": len(node_rows), "edges": len(edge_rows)}
 
 
+# --- Chat sessions stored as graph nodes/edges -----------------------------
+# A session is a node in `memories` with kind='chat_session'.
+# Each chat message is a node with kind='chat_message'.
+# Edges:
+#   session --(in_session)-> message
+#   child_session --(forked_from)-> parent_session
+# The JSON metadata of each node keeps the original fields.
+
+# Utility helpers -----------------------------------------------------------
+
+def _dictfetch(cur):
+    """Return list[dict] from cursor."""
+    cols = [c[0] for c in cur.description]
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+# --------------------------------------------------------------------------
+
 @app.get("/sessions/")
 def list_sessions():
+    """Return most recent chat sessions (kind='chat_session')."""
+    q = """
+    SELECT id,
+           content                AS title,
+           (_metadata->>'user_id')       AS user_id,
+           (_metadata->>'created_at')    AS created_at,
+           (_metadata->>'forked_from')   AS forked_from,
+           (_metadata->>'forked_at')     AS forked_at
+    FROM memories
+    WHERE kind = 'chat_session'
+    ORDER BY (_metadata->>'created_at')::timestamptz DESC
+    LIMIT 100
+    """
     with psycopg2.connect(**DB, cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM chat_sessions ORDER BY created_at DESC LIMIT 100")
-            return cur.fetchall()
+            cur.execute(q)
+            rows = cur.fetchall()
+            return rows
 
 @app.get("/sessions/{sid}")
 def get_session(sid: str):
