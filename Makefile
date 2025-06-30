@@ -23,9 +23,10 @@ realclean:: clean
 	find . -name __pycache__ | xargs rm -fr
 	tree -I .git -asF . | cat
 
-oldtest:: api
-
 test:
+	set -a ; . ./.env ; .venv/bin/pytest
+
+old_test:
 	set -a ; . ./.env ; .venv/bin/pytest test_bulkload_graph.py
 	set -a ; . ./.env ; .venv/bin/pytest test_list_api.py
 	set -a ; . ./.env ; .venv/bin/pytest test_json_safe.py
