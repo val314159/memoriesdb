@@ -28,9 +28,7 @@ BEGIN
 END
 $$;
 
--- Set up the app.current_user_id parameter with a default value
--- This is needed for audit triggers
-ALTER DATABASE memories SET "app.current_user_id" = '00000000-0000-0000-0000-000000000000';
+-- Session variables will be set per connection
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON DATABASE memories TO memories_user;

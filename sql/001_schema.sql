@@ -173,15 +173,20 @@ EXECUTE FUNCTION update_content_hash();
 CREATE OR REPLACE FUNCTION log_memory_change()
 RETURNS TRIGGER AS $$
 DECLARE
-    user_id UUID;
+    session_user_id UUID;
 BEGIN
-    -- Try to get the current user ID, or use NULL if not set
-    BEGIN
-        user_id := current_setting('app.current_user_id')::UUID;
-    EXCEPTION WHEN OTHERS THEN
-        user_id := NULL;
-    END;
+    -- Require the session user to be set
+    session_user_id := current_setting('app.current_user_id')::UUID;
     
+    -- Always set created_by/updated_by to the session user
+    IF TG_OP = 'INSERT' THEN
+        NEW.created_by := session_user_id;
+        NEW.updated_by := session_user_id;
+    ELSIF TG_OP = 'UPDATE' THEN
+        NEW.updated_by := session_user_id;
+    END IF;
+    
+    -- Log the change
     INSERT INTO audit_log (
         table_name, 
         record_id, 
@@ -196,8 +201,9 @@ BEGIN
         TG_OP,
         row_to_json(OLD),
         row_to_json(NEW),
-        user_id
+        session_user_id
     );
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
