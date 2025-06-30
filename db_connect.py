@@ -36,6 +36,25 @@ class AppCursor(RealDictCursor):
             return next(iter(row.values()))
         return None
 
+    # --- json-safe iterator -------------------------------------------
+    def safe_iter(self):
+        """Yield rows already run through db_utils.json_safe().
+
+        Use when you plan to serialise rows directly to JSON and want to
+        stream them without an intermediate list:
+
+        ```python
+        with db_cursor() as cur:
+            cur.execute("SELECT * FROM memories")
+            for doc in cur.safe_iter():
+                send(doc)  # ready for json.dumps or FastAPI response
+        ```
+        """
+        # Lazy import avoids circular import at module initialisation time.
+        from db_utils import json_safe  # pylint: disable=import-error,cyclic-import
+        for row in self:
+            yield json_safe(row)
+
 DB_PARAMS: dict[str, str] = {
     "dbname": os.getenv("DB_NAME", "memories"),
     "user": os.getenv("DB_USER", "memories_user"),
