@@ -26,11 +26,22 @@ try:
     _CUSTOM_ENCODERS[_np.ndarray] = lambda arr: arr.tolist()
 except ImportError:  # pragma: no cover
     pass
+# pgvector (>=0.4) reorganised its API; handle both layouts
+_PGVectorType = None  # type: ignore
 try:
-    from pgvector.psycopg2 import Vector as _PGVector  # type: ignore
-    _CUSTOM_ENCODERS[_PGVector] = lambda v: list(v)
+    import pgvector.psycopg2.vector as _pgv_mod  # type: ignore
+    # Prefer BinaryVector if present, else Vector
+    _PGVectorType = getattr(_pgv_mod, "BinaryVector", None) or getattr(_pgv_mod, "Vector", None)
 except ImportError:  # pragma: no cover
     pass
+if _PGVectorType is None:
+    # Older versions exposed Vector at package root
+    try:
+        from pgvector.psycopg2 import Vector as _PGVectorType  # type: ignore
+    except ImportError:  # pragma: no cover
+        _PGVectorType = None  # type: ignore
+if _PGVectorType is not None:
+    _CUSTOM_ENCODERS[_PGVectorType] = lambda v: v.to_list() if hasattr(v, "to_list") else list(v)
 
 def json_safe(data: Any):
     """Return a JSON-serialisable version of *data* using FastAPI's encoder."""
