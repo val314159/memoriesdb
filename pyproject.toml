@@ -19,13 +19,13 @@ dependencies = [
     "uvicorn>=0.35.0",
     "httpx>=0.28.1",
     "fastapi>=0.115.14",
+    "jupyter>=1.1.1",
+    "Faker>=13.3.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "jupyter>=1.1.1",
-    "uv>=0.7.12",
-    "Faker>=13.3.0",
+  # let's be real, we're stuffing all the dev stuff in for now
 ]
 
 [build-system]
