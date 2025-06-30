@@ -13,7 +13,7 @@ from typing import Optional, List
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import execute_values, RealDictCursor
-from datetime import datetime
+from datetime import datetime, timezone
 
 from db_connect import get_conn as db_connect, db_cursor
 
@@ -64,7 +64,7 @@ def bulkload(file: UploadFile = File(...)):
 
     reserved = {"kind", "id", "title", "user_id", "created_at", "role", "content", "timestamp", "name", "function_call"}
     node_rows, edge_rows = [], []
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     for line in file.file:
         try:
             l = line.decode().strip()
@@ -171,7 +171,7 @@ def get_session(sid: str):
 @app.post("/sessions/")
 def create_session(sess: SessIn):
     sid = sess.id or str(uuid.uuid4())
-    now = sess.created_at or datetime.utcnow().isoformat()
+    now = sess.created_at or datetime.now(timezone.utc).isoformat()
 
     session_meta = {
         "user_id": sess.user_id,
@@ -244,7 +244,7 @@ def fork_session(sid: str, body: ForkReq):
     forked_at = body.forked_at
 
     new_sid = str(uuid.uuid4())
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         with db_connect() as conn:
