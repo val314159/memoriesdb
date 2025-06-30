@@ -23,6 +23,7 @@ dependencies = [
     "Faker>=13.3.0",
     "python-multipart>=0.0.20",
     "pytest>=8.4.1",
+    "psycopg>=3.2.9",
 ]
 
 [project.optional-dependencies]

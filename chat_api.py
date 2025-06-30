@@ -15,8 +15,8 @@ import psycopg2
 from psycopg2.extras import execute_values, RealDictCursor
 from datetime import datetime
 
-load_dotenv()
-DB = dict(dbname=os.getenv('DB_NAME','memories'), user=os.getenv('DB_USER','memories_user'), password=os.getenv('DB_PASSWORD','your_secure_password'), host=os.getenv('DB_HOST','localhost'), port=os.getenv('DB_PORT','5432'))
+from db_connect import get_conn as db_connect
+
 
 app = FastAPI(title="Chat Session API", version="0.1")
 
@@ -58,7 +58,7 @@ def json_safe_row(row):
 
 @app.get("/memories/")
 def list_memories(limit: int = 100, offset: int = 0):
-    with psycopg2.connect(**DB) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with db_connect() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SELECT * FROM memories ORDER BY id DESC LIMIT %s OFFSET %s", (limit, offset))
         rows = cur.fetchall()
         
@@ -83,7 +83,7 @@ def list_memories(limit: int = 100, offset: int = 0):
 
 @app.get("/edges/")
 def list_edges(limit: int = 100, offset: int = 0):
-    with psycopg2.connect(**DB) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with db_connect() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("SELECT * FROM memory_edges ORDER BY id DESC LIMIT %s OFFSET %s", (limit, offset))
         rows = cur.fetchall()
         
@@ -137,7 +137,7 @@ def bulkload(file: UploadFile = File(...)):
             meta = {kk:vv for kk,vv in v.items() if kk not in ("source_id","target_id","relation")}
             edge_rows.append((str(uuid.uuid4()), source_id, target_id, relation, meta and json.dumps(meta) or None))
     try:
-        with psycopg2.connect(**DB) as conn:
+        with db_connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SET app.current_user_id = '00000000-0000-0000-0000-000000000001'")
                 if node_rows:
@@ -190,7 +190,7 @@ def list_sessions():
     ORDER BY (_metadata->>'created_at')::timestamptz DESC
     LIMIT 100
     """
-    with psycopg2.connect(**DB, cursor_factory=RealDictCursor) as conn:
+    with db_connect(cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
             cur.execute(q)
             rows = cur.fetchall()
@@ -198,7 +198,7 @@ def list_sessions():
 
 @app.get("/sessions/{sid}")
 def get_session(sid: str):
-    with psycopg2.connect(**DB, cursor_factory=RealDictCursor) as conn:
+    with db_connect(cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM chat_sessions WHERE id=%s", (sid,))
             sess = cur.fetchone()
@@ -213,7 +213,7 @@ def create_session(sess: SessIn):
     sid = sess.id or str(uuid.uuid4())
     now = sess.created_at or datetime.utcnow().isoformat()
     try:
-        with psycopg2.connect(**DB) as conn:
+        with db_connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SET app.current_user_id = %s", (sess.user_id,))
                 cur.execute("""
@@ -235,7 +235,7 @@ def fork_session(sid: str, forked_at: Optional[str] = None, user_id: str = "0000
     new_sid = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
     try:
-        with psycopg2.connect(**DB) as conn:
+        with db_connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SET app.current_user_id = %s", (user_id,))
                 cur.execute("SELECT title FROM chat_sessions WHERE id=%s", (sid,))
@@ -258,7 +258,7 @@ def fork_session(sid: str, forked_at: Optional[str] = None, user_id: str = "0000
 @app.get("/sessions/{sid}/history")
 def session_history(sid: str):
     """Get all messages in a session, including inherited from forks up to fork point."""
-    with psycopg2.connect(**DB, cursor_factory=RealDictCursor) as conn:
+    with db_connect(cursor_factory=RealDictCursor) as conn:
         with conn.cursor() as cur:
             history = []
             cur_sid, forked_at = sid, None
