@@ -1,7 +1,7 @@
 # MemoriesDB Makefile
 
 # Declare all phony targets
-.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers help
+.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers debug debug-docker help
 
 # Variables
 PG = pg15
@@ -109,6 +109,21 @@ start-workers:
 	python vindexing_worker.py &
 	@echo "Workers started"
 
+# Debug targets
+debug: setup-db
+	@echo "Starting services in debug mode..."
+	@export DEBUG=true && \
+	honcho start
+	@echo "Debug session ended"
+
+debug-docker: 
+	@echo "Building and running Docker container in debug mode..."
+	docker build -t memories .
+	docker run -it --rm --env-file=.env -e DEBUG=true --network=host \
+		-v `pwd`:/app \
+		--name memories-debug memories
+	@echo "Debug Docker session ended"
+
 # Clean operations
 clean:
 	find . -name \*~ -o -name .\*~ | xargs rm -fr
@@ -143,5 +158,7 @@ help:
 	@echo "  make pgvector-stop-custom       - Stop and remove the custom PostgreSQL container"
 	@echo "  make setup-db                   - Set up database schema"
 	@echo "  make start-workers             - Start the embedding and indexing workers"
+	@echo "  make debug                      - Run services locally in debug mode"
+	@echo "  make debug-docker               - Run in Docker container with debug mode and live code mount"
 	@echo "  make clean                      - Stop container and remove data directory"
 	@echo "  make help                       - Show this help message"
