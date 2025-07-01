@@ -107,6 +107,27 @@ async def execute_query(
             logger.debug(f"Query streamed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
 
 
+async def execute(
+    query: str,
+    params: Optional[tuple] = None
+) -> None:
+    """Execute a SQL statement that doesn't return results (INSERT, UPDATE, DELETE, DDL, etc.)
+    
+    Args:
+        query: The SQL statement to execute
+        params: Optional parameters for the statement
+    """
+    start_time = time.time()
+    pool = await get_pool()
+    
+    async with pool.connection() as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute(query, params)
+            await conn.commit()  # Explicitly commit changes
+            
+            duration = time.time() - start_time
+            logger.debug(f"Statement executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
+
 async def execute_query_fetchone(
     query: str,
     params: Optional[tuple] = None,

@@ -3,28 +3,38 @@ import asyncio
 import logging
 import time
 
-from db_utils import execute_query, execute_query_fetchone
+from db_utils import execute_query, execute_query_fetchone, execute_query_fetchall, execute
 from logging_setup import get_logger
 
 logger = get_logger(__name__)
 logger.setLevel(logging.INFO)
 
+async def setup_test_table():
+    """Setup test table using execute for DDL and INSERT"""
+    logger.info("Setting up test table...")
+    await execute("""DROP TABLE IF EXISTS test_table;""")
+    await execute("""CREATE TABLE test_table (id SERIAL PRIMARY KEY, name TEXT);""")
+    
+    # Insert test data
+    for i in range(10):
+        await execute("""INSERT INTO test_table (name) VALUES (%s)""", (f"test-{i}",))
+    
+    logger.info("Test table setup complete")
+
+async def cleanup_test_table():
+    """Clean up test table using execute"""
+    logger.info("Cleaning up test table...")
+    await execute("""DROP TABLE IF EXISTS test_table;""")
+    logger.info("Test table cleanup complete")
+
 async def test_execute_query_streaming():
     """Test streaming results from execute_query"""
     logger.info("Testing execute_query streaming...")
     
-    # Create test data
-    await execute_query_fetchone("""DROP TABLE IF EXISTS test_table;""")
-    await execute_query_fetchone("""CREATE TABLE test_table (id SERIAL PRIMARY KEY, name TEXT);""")  
-    
-    # Insert test data
-    for i in range(10):
-        await execute_query_fetchone("""INSERT INTO test_table (name) VALUES (%s)""", (f"test-{i}",))
-    
     # Test streaming with async iterator
     count = 0
     start = time.time()
-    async for row in await execute_query("""SELECT * FROM test_table ORDER BY id"""):
+    async for row in execute_query("""SELECT * FROM test_table ORDER BY id"""):
         logger.info(f"Row {count}: {row}")
         count += 1
         # Simulate processing time to demonstrate streaming
@@ -53,8 +63,46 @@ async def test_execute_query_streaming():
         
     logger.info("✅ All streaming tests passed!")
 
+async def test_fetch_all():
+    """Test fetching multiple rows at once"""
+    logger.info("Testing execute_query_fetchall...")
+    
+    # Test basic fetch all
+    rows = await execute_query_fetchall("""SELECT * FROM test_table ORDER BY id""")
+    logger.info(f"Fetched {len(rows)} rows at once")
+    assert len(rows) == 10, f"Expected 10 rows, got {len(rows)}"
+    
+    # Test with parameters
+    param_rows = await execute_query_fetchall(
+        """SELECT * FROM test_table WHERE id > %s AND id < %s ORDER BY id""", 
+        (3, 8)
+    )
+    logger.info(f"Parameter query returned {len(param_rows)} rows")
+    assert len(param_rows) == 4, f"Expected 4 rows, got {len(param_rows)}"
+    
+    # Test dictionary results
+    dict_rows = await execute_query_fetchall(
+        """SELECT id, name FROM test_table WHERE id <= 5 ORDER BY id""",
+        as_dict=True
+    )
+    logger.info(f"Dictionary row example: {dict_rows[0]}")
+    assert 'id' in dict_rows[0], "Expected dictionary row with 'id' key"
+    assert 'name' in dict_rows[0], "Expected dictionary row with 'name' key"
+    
+    logger.info("✅ All fetchall tests passed!")
+
 async def main():
-    await test_execute_query_streaming()
+    # Setup
+    await setup_test_table()
+    
+    try:
+        # Run tests
+        await test_execute_query_streaming()
+        await test_fetch_all()
+        logger.info("✅ All database utility tests passed!")
+    finally:
+        # Cleanup
+        await cleanup_test_table()
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -177,6 +177,7 @@ clean-all: pgvector-stop
 test:
 	./venv/bin/python test_logging.py
 	./venv/bin/python test_connection.py
+	./venv/bin/python test_db_utils.py
 	./venv/bin/python test_core_api.py
 
 # Help
