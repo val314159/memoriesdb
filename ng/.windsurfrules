@@ -32,6 +32,17 @@
 
 - figure out what mode to be in based on context, but ask if we want to switch it.  or switch it if specifically requested by the user.
 
+
+
+- "Think of memories as neurons and edges as synapses when designing operations"
+- "APIs should feel intuitive and 'thought-like', mirroring how human memory association works"
+- graphs should be visually explorable; prioritize intuitive navigation over dense information"
+- "Any developer should be able to hold the core system model in their head; refactor when this becomes difficult"
+
+
 SUPER IMPORTANT FOOTNOTE:
 
 - don't go into loops, occasionally is okay, but if you're having too much trouble, ask the user for help!
+
+
+
