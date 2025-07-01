@@ -1,13 +1,16 @@
 # MemoriesDB Makefile
 
 # Declare all phony targets
-.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers debug debug-docker help
+.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers debug debug-docker logs-dir help
 
 # Variables
 PG = pg15
 V = --rm --env-file=.env -v`pwd`/sql:/docker-entrypoint-initdb.d \
 	-p5432:5432 --name pgvector pgvector/pgvector:0.8.0-${PG}
 M = --rm --env-file=.env --network=host --name memories memories
+
+# Log directory
+LOG_DIR = ./logs
 
 # Main targets
 all: start
@@ -87,8 +90,13 @@ reset-db: pgvector-wait
 # Memories container management
 M = --rm --env-file=.env --network=host --name memories memories
 
-memories-start: 
-	docker build . --tag memories ; docker run -d ${M}
+# Create logs directory if it doesn't exist
+logs-dir:
+	mkdir -p ${LOG_DIR}
+	@echo "Log directory created: ${LOG_DIR}"
+
+memories-start: logs-dir
+	docker build . --tag memories ; docker run -d ${M} -v `pwd`/${LOG_DIR}:/app/logs
 	@echo "Memories container started"
 
 memories-stop:
@@ -123,11 +131,12 @@ debug: setup-db
 	honcho start
 	@echo "Debug session ended"
 
-debug-docker: 
+debug-docker: logs-dir
 	@echo "Building and running Docker container in debug mode..."
 	docker build -t memories .
 	docker run -it --rm --env-file=.env -e DEBUG=true --network=host \
 		-v `pwd`:/app \
+		-e LOG_FILE=/app/logs/memoriesdb.log \
 		--name memories-debug memories
 	@echo "Debug Docker session ended"
 
@@ -169,6 +178,7 @@ help:
 	@echo "  make setup-db                   - Set up database schema"
 	@echo "  make reset-db                   - Reset database by dropping and recreating schema"
 	@echo "  make start-workers             - Start the embedding and indexing workers"
+	@echo "  make logs-dir                   - Create logs directory for file logging"
 	@echo "  make debug                      - Run services locally in debug mode"
 	@echo "  make debug-docker               - Run in Docker container with debug mode and live code mount"
 	@echo "  make refresh                    - Complete reset: stop container, reset DB, and start debug Docker"

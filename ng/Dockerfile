@@ -7,6 +7,9 @@ WORKDIR /app
 COPY requirements.txt . 
 RUN pip install -r requirements.txt
 
+# Create log directory
+RUN mkdir -p /app/logs
+
 # Copy all code
 COPY . .
 

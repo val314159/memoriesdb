@@ -7,19 +7,15 @@ into more logical operations that handle common workflows.
 """
 
 import asyncio
-import logging
 import uuid
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import db_utils
-from config import DEBUG, OLLAMA_URL, EMBEDDING_MODEL, CHAT_MODEL
+from config import OLLAMA_URL, EMBEDDING_MODEL, CHAT_MODEL
+from logging_setup import get_logger
 
-# Set up logging
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG else logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Get configured logger
+logger = get_logger(__name__)
 
 # Optional import for embeddings generation
 try:

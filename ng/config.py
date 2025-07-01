@@ -18,3 +18,6 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 # Model configurations
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-minilm")  # Default embedding model
 CHAT_MODEL = os.getenv("CHAT_MODEL", "llama3.1")  # Default chat/tool-calling model
+
+# Logging
+LOG_FILE = os.getenv("LOG_FILE", "")  # Set to a filename to enable file logging

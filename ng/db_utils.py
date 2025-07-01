@@ -8,20 +8,16 @@ the database for consistent error handling and connection management.
 """
 
 import asyncio
-import logging
 import psycopg
 from psycopg.rows import dict_row
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from config import DSN, DEBUG
+from config import DSN
+from logging_setup import get_logger
 
-# Set up logging
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG else logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Get configured logger
+logger = get_logger(__name__)
 
 # Connection pool
 _pool = None

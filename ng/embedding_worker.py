@@ -4,6 +4,9 @@ import psycopg
 import numpy as np
 import ollama  # or remove if not installed
 from config import DEBUG, DSN
+from logging_setup import get_logger
+
+logger = get_logger(__name__)
 
 async def embed_loop():
     async with psycopg.AsyncConnection.connect(DSN) as conn:
@@ -45,7 +48,7 @@ async def embed_loop():
                             WHERE rec = %s
                         """, (mem_id,))
 
-                        print(f"✅ Embedded {mem_id}")
+                        logger.info(f"✅ Embedded {mem_id}")
 
                     except Exception as e:
                         await cur.execute("""
@@ -54,7 +57,7 @@ async def embed_loop():
                             WHERE rec = %s
                         """, (str(e), mem_id))
 
-                        print(f"❌ Embedding error: {mem_id} => {e}")
+                        logger.error(f"❌ Embedding error: {mem_id} => {e}")
 
                 else:
                     await asyncio.sleep(2)

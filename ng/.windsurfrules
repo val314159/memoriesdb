@@ -1,4 +1,5 @@
 - We use mostly python except where we can't
+- don't use #! at hte top of the file if it's not explicity supposed to be a script
 - We use Makefile for all toplevel devops-y dev-like interaction except one-offs
 - Use type hints when they make sense but don't try too hard
 - Optimize for readability over premature optimization
