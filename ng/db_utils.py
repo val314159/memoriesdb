@@ -8,24 +8,21 @@ the database for consistent error handling and connection management.
 """
 
 import asyncio
+import logging
 import psycopg
+import psycopg_pool
 from psycopg.rows import dict_row
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
-try:
-    # In newer versions of psycopg, the pool is in a separate package
-    from psycopg_pool import AsyncConnectionPool
-    has_pool_package = True
-except ImportError:
-    # Fall back to psycopg's built-in pool if available
-    has_pool_package = False
-
-from config import DSN
+from config import PG_USER, PG_PASS, PG_HOST, PG_PORT, PG_DB, DEBUG, DSN
 from logging_setup import get_logger
 
-# Get configured logger
 logger = get_logger(__name__)
+
+# Build Database Connection String
+logged_dsn = DSN.replace(PG_PASS, "***") if PG_PASS else DSN
+logger.info(f"Database connection configured with DSN: {logged_dsn}")
 
 # Connection pool
 _pool = None
@@ -33,16 +30,11 @@ _pool = None
 async def get_pool():
     """Get or create the database connection pool"""
     global _pool
-    if _pool is None:
-        # Create connection pool
-        if has_pool_package:
-            # Use dedicated pool package
-            _pool = AsyncConnectionPool(DSN, min_size=1, max_size=10)
-            await _pool.open()
-        else:
-            # Fallback to creating individual connections as needed
-            logger.warning("AsyncConnectionPool not available, will create individual connections")
-        logger.info(f"Database connection configured with DSN: {DSN.replace(DSN.split('@')[0], '***')}")
+    
+    if not _pool:
+        _pool = psycopg_pool.AsyncConnectionPool(DSN, min_size=1, max_size=10)
+        await _pool.wait()
+            
     return _pool
 
 async def execute_query(
@@ -50,7 +42,7 @@ async def execute_query(
     params: Optional[tuple] = None,
     as_dict: bool = False
 ):
-    """Execute a SQL query and return an async iterator for streaming results
+    """Execute a SQL query and return all results
     
     Args:
         query: The SQL query to execute
@@ -58,54 +50,23 @@ async def execute_query(
         as_dict: If True, return rows as dictionaries
     
     Returns:
-        AsyncIterator yielding rows one at a time
+        List of query results
     """
-    pool = await get_pool()
     start_time = time.time()
-    conn = None
-    cursor = None
+    pool = await get_pool()
     
-    try:
-        # Handle both pooled and direct connections
-        if has_pool_package and pool is not None:
-            # Use connection from pool
-            conn = await pool.connection()
-        else:
-            # Create individual connection
-            conn = await psycopg.AsyncConnection.connect(DSN)
-        
+    async with pool.connection() as conn:
         if as_dict:
             conn.row_factory = dict_row
             
-        # Use server-side named cursor for streaming
-        cursor = await conn.cursor(name=f"stream_{int(time.time()*1000)}")
-        await cursor.execute(query, params)
-        
-        # Return an async generator
-        async def result_generator():
-            try:
-                async for row in cursor:
-                    yield row
-            finally:
-                # Clean up cursor and connection when done
-                await cursor.close()
-                if conn and not has_pool_package:
-                    await conn.close()
-                    
-        duration = time.time() - start_time
-        logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
-        return result_generator()
+        async with conn.cursor() as cursor:
+            await cursor.execute(query, params)
+            results = await cursor.fetchall()
             
-    except Exception as e:
-        duration = time.time() - start_time
-        logger.error(f"Query failed after {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
-        logger.error(f"Error: {str(e)}")
-        # Clean up resources on error
-        if cursor and not cursor.closed:
-            await cursor.close()
-        if conn and not has_pool_package:
-            await conn.close()
-        raise
+            duration = time.time() - start_time
+            logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
+            
+            return results
 
 async def execute_query_fetchone(
     query: str,
@@ -113,8 +74,6 @@ async def execute_query_fetchone(
     as_dict: bool = False
 ) -> Optional[Union[tuple, Dict[str, Any]]]:
     """Execute a SQL query and return a single row
-    
-    A thin wrapper around execute_query that returns just the first row or None
     
     Args:
         query: The SQL query to execute
@@ -124,13 +83,22 @@ async def execute_query_fetchone(
     Returns:
         A single row or None if no results
     """
-    result_gen = await execute_query(query, params, as_dict)
-    try:
-        # Just get the first result
-        return await anext(result_gen)
-    except StopAsyncIteration:
-        # No results found
-        return None
+    start_time = time.time()
+    pool = await get_pool()
+    
+    # Simple direct implementation using context managers
+    async with pool.connection() as conn:
+        if as_dict:
+            conn.row_factory = dict_row
+            
+        async with conn.cursor() as cursor:
+            await cursor.execute(query, params)
+            result = await cursor.fetchone()
+            
+            duration = time.time() - start_time
+            logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
+            
+            return result
 
 async def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
     """Get a memory by ID
