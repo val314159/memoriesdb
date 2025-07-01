@@ -1,0 +1,37 @@
+- We use mostly python except where we can't
+- We use Makefile for all toplevel devops-y dev-like interaction except one-offs
+- Use type hints when they make sense but don't try too hard
+- Optimize for readability over premature optimization
+- Follow PEP8 style guide for Python code, but also keep it terse yet readable.
+
+- there should be ONE PLACE in python where we encode/serialize/dump python data structures to JSON, and JSON decided/deserialized/load to python
+- there is ONE PLACE where we get ALL database connections.
+- our database is postgres with pgvector isntalled, and we prefer to use ossp time-based UUIDs for ids, thus maing it "sort-of-a-time-series-database"
+
+- We are making a graph/vector database on top of postgres
+- We have vertices and edge tables (V and E) and they are called memories and memory_edges respectively
+- We have caching in the memory_graph for optimizing graph searches
+
+- we want a python api that goes direcly to the db
+- we dont want a REST api yet, but hwen we do it'll be a thing wrapper about http calls -> python api -> JSON dumps
+
+- look at PROJECT.md for the project plan to figure out what we need to do and what files to change.
+- remember that we are in pne phase of the project at any time and we won't go to the next phase unless prompted by the user
+- we may ask to go to the next phase if we think the current phase is complete.
+
+- completeness is defined as "barely sufficient": when code is "good enuf" for shipping because it's somewhat tested.
+- we prefer iteration to perfection.  you can't iterate on nothing.
+
+- offer suggestions if you think of alternative, more efficient ways to do things
+
+- we will have two modes of thinking:
+
+  1. "new feature" where we might do a lot of file generation, in this case we prefer to keep it in one place so it's easy to idenfy changes for the reviewer.
+
+  2. "regular code mode" where we minimize te number of files we change at once.  sometimes code requires changes all over the place, but if possible we'll keep the changes in one (or maybe two, or maaaaaaybe three) files.
+
+- figure out what mode to be in based on context, but ask if we want to switch it.  or switch it if specifically requested by the user.
+
+SUPER IMPORTANT FOOTNOTE:
+
+- don't go into loops, occasionally is okay, but if you're having too much trouble, ask the user for help!
