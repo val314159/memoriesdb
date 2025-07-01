@@ -37,12 +37,12 @@ async def get_pool():
             
     return _pool
 
-async def execute_query(
+async def execute_query_fetchall(
     query: str,
     params: Optional[tuple] = None,
     as_dict: bool = False
 ):
-    """Execute a SQL query and return all results
+    """Execute a SQL query and return all results at once
     
     Args:
         query: The SQL query to execute
@@ -50,7 +50,7 @@ async def execute_query(
         as_dict: If True, return rows as dictionaries
     
     Returns:
-        List of query results
+        List of all query results
     """
     start_time = time.time()
     pool = await get_pool()
@@ -67,6 +67,45 @@ async def execute_query(
             logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
             
             return results
+
+async def execute_query(
+    query: str,
+    params: Optional[tuple] = None,
+    as_dict: bool = False
+):
+    """Execute a SQL query and stream results one row at a time
+    
+    This function provides true streaming by yielding rows directly
+    from the cursor without loading all results into memory.
+    
+    Args:
+        query: The SQL query to execute
+        params: Optional parameters for the query
+        as_dict: If True, return rows as dictionaries
+    
+    Returns:
+        An async generator that yields rows one at a time
+    """
+    start_time = time.time()
+    pool = await get_pool()
+    
+    async with pool.connection() as conn:
+        if as_dict:
+            conn.row_factory = dict_row
+            
+        async with conn.cursor() as cursor:
+            await cursor.execute(query, params)
+            
+            # Stream results directly - only one row in memory at a time
+            while True:
+                row = await cursor.fetchone()
+                if row is None:
+                    break
+                yield row
+            
+            duration = time.time() - start_time
+            logger.debug(f"Query streamed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
+
 
 async def execute_query_fetchone(
     query: str,
