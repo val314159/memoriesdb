@@ -1,7 +1,7 @@
 # MemoriesDB Makefile
 
 # Declare all phony targets
-.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers debug debug-docker logs-dir help
+.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers debug debug-docker logs-dir test help
 
 # Variables
 PG = pg15
@@ -173,9 +173,19 @@ clean-all: pgvector-stop
 	rm -rf $(PG_DATA_DIR)
 	@echo "Cleaned up database data directory"
 
+# Tests
+test:
+	./venv/bin/python test_logging.py
+	./venv/bin/python test_connection.py
+	./venv/bin/python test_db_utils.py
+	./venv/bin/python test_core_api.py
+
 # Help
 help:
 	@echo "MemoriesDB Makefile Commands:"
+	@echo "  make test                      - Run database connection tests"
+	@echo "  make test-logging              - Run logging tests"
+	@echo "  make test-all                  - Run all tests"
 	@echo "  make pgvector-start-official    - Start PostgreSQL with pgvector using official image"
 	@echo "  make pgvector-stop-official     - Stop and remove the official PostgreSQL container"
 	@echo "  make pgvector-build             - Build custom PostgreSQL with pgvector image"
