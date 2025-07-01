@@ -77,6 +77,13 @@ setup-db: pgvector-wait
 	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < sql/001_memory_mesh.sql
 	@echo "Database schema setup complete"
 
+# Reset database schema (drop and recreate)
+reset-db: pgvector-wait
+	@echo "Resetting database schema..."
+	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	@echo "Schema dropped, recreating..."
+	make setup-db
+
 # Memories container management
 M = --rm --env-file=.env --network=host --name memories memories
 

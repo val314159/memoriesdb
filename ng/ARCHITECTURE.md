@@ -72,9 +72,16 @@ The SQL implementation includes:
 
 ## Search Capabilities
 
-- Pure vector search with cosine similarity
+- Pure vector search using inner product on normalized vectors (optimized performance)
 - Hybrid search combining vector embeddings and trigram text similarity
 - Recursive graph traversal for relationship exploration
+
+## Vector Strategy
+
+- All embeddings are normalized to unit length (L2 norm = 1)
+- Using inner product operator (`<#>`) for optimized similarity search
+- Similarity values range from -1 (opposite) to 1 (identical)
+- Default similarity threshold of 0.7 for relevant matches
 
 ## Development
 

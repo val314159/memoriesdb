@@ -5,9 +5,10 @@ A phase-based project plan for developing the MemoriesDB system.
 ## Phase 0: Finalize SQL files
 
 - [X] Write SQL files
-- [X] Sign off on SQL files as complete
 
-## Phase 1: Esdtablish Dev Flow
+- [X] Get sign-off on SQL files as complete
+
+## Phase 1: Establish Dev Flow
 
 - [X] Simple Makefile
   - [X] write Dockerfile for memoriesdb vm
@@ -15,13 +16,16 @@ A phase-based project plan for developing the MemoriesDB system.
   - [X] make pgvector-stop  (use docker /pgvector image )
   - [X] make memories-start (use docker use Dockerfile)
   - [X] make memories-stop  (use docker use Dockerfile)
-  - [ ] make setup-db and reset-db
+  - [X] make setup-db and reset-db
+
+- [X] Get sign-off on Phase as complete
 
 ## Phase 2: Core Backend API
 
 - [X] db_utils.py - direct SQL call and super-low level stuff.  Everything else in the system should go thru this layer to get to the DB!!!! (if there's a problem tell the user immediately)
 - [X] core_api.py - wraps low level to make medium level logical calls.
 
+- [ ] Get sign-off on Phase as complete
 
 =======================
 IGNORE AFTER THIS POINT

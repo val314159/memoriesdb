@@ -125,37 +125,48 @@ async def search_memories_vector(
     query_embedding: list,
     user_id: Optional[str] = None,
     limit: int = 10,
-    distance_threshold: float = 0.3
+    similarity_threshold: float = 0.7
 ) -> List[Dict[str, Any]]:
-    """Search memories by vector similarity
+    """Search memories by vector similarity using normalized vectors
+    
+    This function uses the <#> operator (negative inner product) which is optimized 
+    for normalized vectors. The similarity is the negative of this value, which 
+    provides a value from -1 (opposite vectors) to 1 (identical vectors).
     
     Args:
-        query_embedding: Vector embedding of the search query
+        query_embedding: Normalized vector embedding of the search query (must be unit length)
         user_id: Optional user ID to filter results
         limit: Maximum number of results to return
-        distance_threshold: Maximum cosine distance for results
+        similarity_threshold: Minimum similarity threshold (-1 to 1 scale, where 1 is identical).
+                             Higher values return fewer but more relevant results.
         
     Returns:
-        List of memories matching the query
+        List of memories matching the query, sorted by decreasing similarity
     """
     user_filter = "AND user_id = %s" if user_id else ""
-    params = [query_embedding]
+    params = []
     if user_id:
         params.append(user_id)
     
+    # Using the WITH clause to avoid repeating the embedding calculation
+    # <#> returns negative inner product, so we multiply by -1 to get similarity
+    # Where similarity of 1 = identical vectors, 0 = orthogonal, -1 = opposite
     query = f"""
-    SELECT id, user_id, content, created_at, updated_at,
-           1 - (content_embedding <=> %s) as similarity
-    FROM memories
-    WHERE content_embedding IS NOT NULL
-    {user_filter}
-    AND 1 - (content_embedding <=> %s) > %s
+    WITH similarity_calc AS (
+        SELECT id, user_id, content, created_at, updated_at,
+               (content_embedding <#> %s) * -1 as similarity
+        FROM memories
+        WHERE content_embedding IS NOT NULL
+        {user_filter}
+    )
+    SELECT * FROM similarity_calc
+    WHERE similarity > %s
     ORDER BY similarity DESC
     LIMIT %s
     """
     
-    # Add the embedding again and other parameters
-    params.extend([query_embedding, 1.0 - distance_threshold, limit])
+    # Add parameters in correct order
+    params = [query_embedding] + params + [similarity_threshold, limit]
     
     return await execute_query(query, tuple(params), fetch=True, as_dict=True)
 
