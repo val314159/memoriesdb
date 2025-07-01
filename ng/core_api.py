@@ -115,46 +115,61 @@ async def get_connected_memories(memory_id: str) -> Dict[str, List[Dict[str, Any
 # ----------------------
 
 async def generate_embedding(text: str) -> List[float]:
-    """Generate an embedding vector for the given text
+    """Generate a normalized embedding vector for the given text
     
     Args:
         text: The text to generate an embedding for
         
     Returns:
-        List of floats representing the embedding vector
+        List of floats representing the normalized embedding vector (unit length)
     """
     if DEBUG and not has_ollama:
         # Generate a random vector in debug mode
         import random
-        return [random.uniform(-1, 1) for _ in range(1536)]
+        import math
+        
+        # Generate random vector
+        raw_vector = [random.uniform(-1, 1) for _ in range(1536)]
+        
+        # Normalize to unit length (L2 norm = 1)
+        norm = math.sqrt(sum(x*x for x in raw_vector))
+        return [x/norm for x in raw_vector]
     
     try:
         # Use Ollama for embeddings
         response = await ollama.embeddings(model=EMBEDDING_MODEL, prompt=text)
-        return response['embedding']
+        
+        # Normalize the embedding to unit length
+        import math
+        raw_vector = response['embedding']
+        norm = math.sqrt(sum(x*x for x in raw_vector))
+        return [x/norm for x in raw_vector]
     except Exception as e:
         logger.error(f"Error generating embedding: {str(e)}")
         raise
 
-async def semantic_search(query: str, user_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+async def semantic_search(query: str, user_id: Optional[str] = None, limit: int = 10, similarity_threshold: float = 0.7) -> List[Dict[str, Any]]:
     """Search memories using semantic similarity
     
     Args:
         query: The search query text
         user_id: Optional user ID to filter results
         limit: Maximum number of results
+        similarity_threshold: Minimum similarity threshold (-1 to 1 scale, where 1 is identical)
+                             Higher values return fewer but more relevant results
         
     Returns:
         List of matching memories with similarity scores
     """
-    # Generate embedding for the query
+    # Generate embedding for the query (already normalized by generate_embedding)
     query_embedding = await generate_embedding(query)
     
-    # Perform vector search
+    # Perform vector search with normalized vectors
     results = await db_utils.search_memories_vector(
         query_embedding=query_embedding,
         user_id=user_id,
-        limit=limit
+        limit=limit,
+        similarity_threshold=similarity_threshold
     )
     
     return results
