@@ -124,6 +124,10 @@ debug-docker:
 		--name memories-debug memories
 	@echo "Debug Docker session ended"
 
+# Refresh target - combines multiple steps for a clean development environment
+refresh: memories-stop reset-db debug-docker
+	@echo "Environment refreshed with clean database and debug container"
+
 # Clean operations
 clean:
 	find . -name \*~ -o -name .\*~ | xargs rm -fr
@@ -148,7 +152,6 @@ clean-all: pgvector-stop
 	@echo "Cleaned up database data directory"
 
 # Help
-# Help
 help:
 	@echo "MemoriesDB Makefile Commands:"
 	@echo "  make pgvector-start-official    - Start PostgreSQL with pgvector using official image"
@@ -157,8 +160,10 @@ help:
 	@echo "  make pgvector-start-custom      - Start PostgreSQL with pgvector using custom Dockerfile"
 	@echo "  make pgvector-stop-custom       - Stop and remove the custom PostgreSQL container"
 	@echo "  make setup-db                   - Set up database schema"
+	@echo "  make reset-db                   - Reset database by dropping and recreating schema"
 	@echo "  make start-workers             - Start the embedding and indexing workers"
 	@echo "  make debug                      - Run services locally in debug mode"
 	@echo "  make debug-docker               - Run in Docker container with debug mode and live code mount"
+	@echo "  make refresh                    - Complete reset: stop container, reset DB, and start debug Docker"
 	@echo "  make clean                      - Stop container and remove data directory"
 	@echo "  make help                       - Show this help message"
