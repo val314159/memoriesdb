@@ -13,6 +13,14 @@ from psycopg.rows import dict_row
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+try:
+    # In newer versions of psycopg, the pool is in a separate package
+    from psycopg_pool import AsyncConnectionPool
+    has_pool_package = True
+except ImportError:
+    # Fall back to psycopg's built-in pool if available
+    has_pool_package = False
+
 from config import DSN
 from logging_setup import get_logger
 
@@ -22,18 +30,19 @@ logger = get_logger(__name__)
 # Connection pool
 _pool = None
 
-async def get_pool() -> psycopg.AsyncConnectionPool:
+async def get_pool():
     """Get or create the database connection pool"""
     global _pool
     if _pool is None:
         # Create connection pool
-        _pool = await psycopg.AsyncConnectionPool.from_pool_params(
-            conninfo=DSN,
-            min_size=1,
-            max_size=10,
-            open=False  # Don't open connections yet
-        )
-        logger.info(f"Connection pool created with DSN: {DSN.replace(DSN.split('@')[0], '***')}")
+        if has_pool_package:
+            # Use dedicated pool package
+            _pool = AsyncConnectionPool(DSN, min_size=1, max_size=10)
+            await _pool.open()
+        else:
+            # Fallback to creating individual connections as needed
+            logger.warning("AsyncConnectionPool not available, will create individual connections")
+        logger.info(f"Database connection configured with DSN: {DSN.replace(DSN.split('@')[0], '***')}")
     return _pool
 
 async def execute_query(
@@ -57,31 +66,43 @@ async def execute_query(
     """
     pool = await get_pool()
     start_time = time.time()
+    conn = None
     
     try:
-        async with pool.connection() as conn:
-            if as_dict:
-                conn.row_factory = dict_row
+        # Handle both pooled and direct connections
+        if has_pool_package and pool is not None:
+            # Use connection from pool
+            conn = await pool.connection()
+        else:
+            # Create individual connection
+            conn = await psycopg.AsyncConnection.connect(DSN)
+        
+        if as_dict:
+            conn.row_factory = dict_row
+            
+        async with conn.cursor() as cur:
+            await cur.execute(query, params)
+            
+            if fetch_one:
+                result = await cur.fetchone()
+            elif fetch:
+                result = await cur.fetchall()
+            else:
+                result = None
                 
-            async with conn.cursor() as cur:
-                await cur.execute(query, params)
-                
-                if fetch_one:
-                    result = await cur.fetchone()
-                elif fetch:
-                    result = await cur.fetchall()
-                else:
-                    result = None
-                    
-                duration = time.time() - start_time
-                logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
-                return result
-                
+            duration = time.time() - start_time
+            logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
+            return result
+            
     except Exception as e:
         duration = time.time() - start_time
         logger.error(f"Query failed after {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
         logger.error(f"Error: {str(e)}")
         raise
+    finally:
+        # Only close non-pooled connections
+        if conn and not has_pool_package:
+            await conn.close()
 
 async def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
     """Get a memory by ID

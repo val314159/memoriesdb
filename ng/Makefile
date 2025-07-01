@@ -5,9 +5,29 @@
 
 # Variables
 PG = pg15
-V = --rm --env-file=.env -v`pwd`/sql:/docker-entrypoint-initdb.d \
-	-p5432:5432 --name pgvector pgvector/pgvector:0.8.0-${PG}
-M = --rm --env-file=.env --network=host --name memories memories
+PG_PORT = 54321
+PG_CONTAINER_NAME = pgvector
+PG_DATA_DIR = ./data/postgres
+
+# Docker run options - use env file for most vars, override port
+V = --rm --env-file=.env \
+	-v`pwd`/sql:/docker-entrypoint-initdb.d \
+	-p${PG_PORT}:5432 \
+	--name pgvector pgvector/pgvector:0.8.0-${PG}
+
+# Memory container options - use env file with port override
+M = --rm --env-file=.env \
+	-e PG_PORT=${PG_PORT} \
+	--network=host \
+	-e LOG_FILE=/app/logs/memoriesdb.log \
+	--name memories memories
+
+# Custom pgvector container options
+C = --name $(PG_CONTAINER_NAME) \
+	--env-file=.env \
+	-v $(PG_DATA_DIR):/var/lib/postgresql/data \
+	-p ${PG_PORT}:5432 \
+	-d memoriesdb-pgvector
 
 # Log directory
 LOG_DIR = ./logs
@@ -21,7 +41,8 @@ start: pgvector-start memories-start
 
 restart: pgvector-restart memories-restart
 
-dev: pgvector-restart pgvector-wait memories-run
+# Interactive development mode (preserves data, includes code mounting for debugging)
+dev: pgvector-stop pgvector-start-custom pgvector-wait memories-debug
 
 clean:
 	find . -name \*~ -o -name .\*~ | xargs rm -fr
@@ -32,7 +53,7 @@ pgvector-start:
 	docker run -d ${V}
 	@echo "PostgreSQL with pgvector started, waiting for it to be ready..."
 	make pgvector-wait
-	@echo "PostgreSQL with pgvector is ready on port 5432"
+	@echo "PostgreSQL with pgvector is ready on port ${PG_PORT}"
 
 pgvector-stop:
 	docker rm -f pgvector || true
@@ -56,13 +77,7 @@ pgvector-build:
 
 # Start custom pgvector container
 pgvector-start-custom: pgvector-build
-	docker run --name $(PG_CONTAINER_NAME) \
-		-e POSTGRES_USER=$(PG_USER) \
-		-e POSTGRES_PASSWORD=$(PG_PASSWORD) \
-		-e POSTGRES_DB=$(PG_DB) \
-		-v $(PG_DATA_DIR):/var/lib/postgresql/data \
-		-p $(PG_PORT):5432 \
-		-d memoriesdb-pgvector
+	docker run ${C}
 	@echo "Custom PostgreSQL with pgvector started on port $(PG_PORT)"
 	@echo "Allow a few seconds for the database to initialize"
 	@echo "Then run: make setup-db"
@@ -83,7 +98,7 @@ setup-db: pgvector-wait
 # Reset database schema (drop and recreate)
 reset-db: pgvector-wait
 	@echo "Resetting database schema..."
-	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	docker exec -i pgvector psql -U memories_user -d memories -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	@echo "Schema dropped, recreating..."
 	make setup-db
 
@@ -110,8 +125,8 @@ memories-run:
 	@echo "Memories container running in interactive mode"
 
 # Database connection
-db:
-	set -a ; . ./.env ; bash -c "psql postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost/$$POSTGRES_DB"
+db-connect:
+	set -a ; . ./.env ; bash -c "psql postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$(PG_PORT)/$$POSTGRES_DB"
 
 # Python virtual environment
 .venv:
@@ -124,24 +139,18 @@ start-workers:
 	python vindexing_worker.py &
 	@echo "Workers started"
 
-# Debug targets
-debug: setup-db
-	@echo "Starting services in debug mode..."
-	@export DEBUG=true && \
-	honcho start
-	@echo "Debug session ended"
+# Local development targets (no Docker)
 
-debug-docker: logs-dir
+memories-debug: logs-dir
 	@echo "Building and running Docker container in debug mode..."
 	docker build -t memories .
-	docker run -it --rm --env-file=.env -e DEBUG=true --network=host \
+	docker run -it --rm ${M} -e DEBUG=true \
 		-v `pwd`:/app \
-		-e LOG_FILE=/app/logs/memoriesdb.log \
 		--name memories-debug memories
 	@echo "Debug Docker session ended"
 
 # Refresh target - combines multiple steps for a clean development environment
-refresh: memories-stop reset-db debug-docker
+refresh: memories-stop reset-db memories-debug
 	@echo "Environment refreshed with clean database and debug container"
 
 # This is where the second clean target was - removed to fix duplication
