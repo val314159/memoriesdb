@@ -144,10 +144,7 @@ debug-docker: logs-dir
 refresh: memories-stop reset-db debug-docker
 	@echo "Environment refreshed with clean database and debug container"
 
-# Clean operations
-clean:
-	find . -name \*~ -o -name .\*~ | xargs rm -fr
-	@echo "Cleaned up temporary files"
+# This is where the second clean target was - removed to fix duplication
 
 # Deep cleaning
 realclean: clean
