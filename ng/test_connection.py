@@ -3,7 +3,7 @@
 import asyncio
 import sys
 import time
-from db_utils import execute_query, execute_query_fetchall, execute_query_fetchone, get_pool
+from db_utils import query, query_fetchall, query_fetchone, get_pool
 
 async def test_connection_pool():
     print("\n1. Testing connection pool...")
@@ -24,22 +24,22 @@ async def test_connection_pool():
         return False
 
 async def test_fetchone():
-    print("\n2. Testing execute_query_fetchone...")
+    print("\n2. Testing query_fetchone...")
     try:
         # Test basic scalar query
-        result = await execute_query_fetchone("SELECT 1 as test")
+        result = await query_fetchone("SELECT 1 as test")
         print(f"Simple scalar query result: {result}")
         
         # Test with parameters
-        param_result = await execute_query_fetchone("SELECT %s::text as param_test", ("Hello",))
+        param_result = await query_fetchone("SELECT %s::text as param_test", ("Hello",))
         print(f"Parameterized query result: {param_result}")
         
         # Test dictionary result
-        dict_result = await execute_query_fetchone("SELECT 42 as answer, 'postgres' as db", as_dict=True)
+        dict_result = await query_fetchone("SELECT 42 as answer, 'postgres' as db", as_dict=True)
         print(f"Dictionary result: {dict_result}")
         
         # Test no results
-        no_result = await execute_query_fetchone("SELECT * FROM pg_tables WHERE tablename = 'nonexistent_table'")
+        no_result = await query_fetchone("SELECT * FROM pg_tables WHERE tablename = 'nonexistent_table'")
         print(f"No results query returned: {no_result}")
         
         return True
@@ -48,30 +48,30 @@ async def test_fetchone():
         return False
         
 async def test_fetchall():
-    print("\n3. Testing execute_query_fetchall...")
+    print("\n3. Testing query_fetchall...")
     try:
         # Test with multiple rows
-        rows = await execute_query_fetchall("SELECT generate_series(1, 20) as num")
+        rows = await query_fetchall("SELECT generate_series(1, 20) as num")
         print(f"Fetched {len(rows)} rows at once")
         for i, row in enumerate(rows[:5]):
             print(f"Row {i+1}: {row}")
             
         # Test with parameters
-        param_rows = await execute_query_fetchall(
+        param_rows = await query_fetchall(
             "SELECT * FROM generate_series(%s::int, %s::int) as nums", 
             (5, 10)
         )
         print(f"Parameter query returned {len(param_rows)} rows")
         
         # Test dictionary results
-        dict_rows = await execute_query_fetchall(
+        dict_rows = await query_fetchall(
             "SELECT generate_series(1, 5) as num, 'test' as text",
             as_dict=True
         )
         print(f"Dictionary row example: {dict_rows[0]}")
         
         # Test empty results
-        empty_rows = await execute_query_fetchall("SELECT * FROM pg_tables WHERE tablename = 'nonexistent_table'")
+        empty_rows = await query_fetchall("SELECT * FROM pg_tables WHERE tablename = 'nonexistent_table'")
         print(f"Empty result set has {len(empty_rows)} rows")
         
         return True
@@ -80,12 +80,12 @@ async def test_fetchall():
         return False
 
 async def test_streaming():
-    print("\n4. Testing execute_query (streaming)...")
+    print("\n4. Testing query (streaming)...")
     try:
         # Test basic streaming
         print("Basic streaming test:")
         count = 0
-        async for row in execute_query("SELECT generate_series(1, 20) as num"):
+        async for row in query("SELECT generate_series(1, 20) as num"):
             count += 1
             if count <= 3:
                 print(f"Stream row {count}: {row}")
@@ -94,7 +94,7 @@ async def test_streaming():
         # Test with parameters
         print("\nStreaming with parameters:")
         param_count = 0
-        async for row in execute_query(
+        async for row in query(
             "SELECT * FROM generate_series(%s::int, %s::int) as nums",
             (50, 60)
         ):
@@ -106,7 +106,7 @@ async def test_streaming():
         # Test with dictionary results
         print("\nStreaming with dictionary results:")
         dict_count = 0
-        async for row in execute_query(
+        async for row in query(
             "SELECT generate_series(1, 5) as num, 'test' as text",
             as_dict=True
         ):
@@ -116,7 +116,7 @@ async def test_streaming():
         # Test empty results
         print("\nStreaming with empty results:")
         empty_count = 0
-        async for row in execute_query("SELECT * FROM pg_tables WHERE tablename = 'nonexistent_table'"):
+        async for row in query("SELECT * FROM pg_tables WHERE tablename = 'nonexistent_table'"):
             empty_count += 1
         print(f"Empty stream returned {empty_count} rows")
         
@@ -142,9 +142,9 @@ async def run_all_tests():
     print("\n" + "=" * 50)
     print(f"Test Results (completed in {duration:.2f}s):")
     print(f"  Connection Pool Tests: {'✅ PASSED' if pool_success else '❌ FAILED'}")
-    print(f"  execute_query_fetchone: {'✅ PASSED' if fetchone_success else '❌ FAILED'}")
-    print(f"  execute_query_fetchall: {'✅ PASSED' if fetchall_success else '❌ FAILED'}")
-    print(f"  execute_query (streaming): {'✅ PASSED' if streaming_success else '❌ FAILED'}")
+    print(f"  query_fetchone: {'✅ PASSED' if fetchone_success else '❌ FAILED'}")
+    print(f"  query_fetchall: {'✅ PASSED' if fetchall_success else '❌ FAILED'}")
+    print(f"  query (streaming): {'✅ PASSED' if streaming_success else '❌ FAILED'}")
     print("=" * 50)
     
     return all_passed

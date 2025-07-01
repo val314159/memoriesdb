@@ -1,6 +1,6 @@
 import asyncio
 from config import DEBUG
-from db_utils import execute_query, execute_query_fetchone
+from db_utils import query, query_fetchone
 from logging_setup import get_logger
 
 logger = get_logger(__name__)
@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 async def index_loop():
     while True:
         # Find next memory to index
-        row = await execute_query_fetchone("""
+        row = await query_fetchone("""
             SELECT rec FROM vindexing_schedule
             WHERE started_at IS NULL AND finished_at IS NULL
             LIMIT 1
@@ -18,7 +18,7 @@ async def index_loop():
             mem_id = row[0]
 
             # Mark as started
-            await execute_query_fetchone("""
+            await query_fetchone("""
                 UPDATE vindexing_schedule
                 SET started_at = NOW()
                 WHERE rec = %s AND started_at IS NULL
@@ -31,10 +31,10 @@ async def index_loop():
                     logger.debug(f"🧪 Pretend indexing {mem_id}")
                 else:
                     # Refresh the materialized view
-                    await execute_query_fetchone("REFRESH MATERIALIZED VIEW memory_graph; SELECT 1 AS refreshed")
+                    await query_fetchone("REFRESH MATERIALIZED VIEW memory_graph; SELECT 1 AS refreshed")
 
                 # Mark as complete
-                await execute_query_fetchone("""
+                await query_fetchone("""
                     UPDATE vindexing_schedule
                     SET finished_at = NOW()
                     WHERE rec = %s
@@ -45,7 +45,7 @@ async def index_loop():
 
             except Exception as e:
                 # Record error
-                await execute_query_fetchone("""
+                await query_fetchone("""
                     UPDATE vindexing_schedule
                     SET error_msg = %s
                     WHERE rec = %s

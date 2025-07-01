@@ -3,7 +3,7 @@ import random
 import numpy as np
 import ollama  # or remove if not installed
 from config import DEBUG
-from db_utils import execute_query, execute_query_fetchone
+from db_utils import query, query_fetchone
 from logging_setup import get_logger
 
 logger = get_logger(__name__)
@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 async def embed_loop():
     while True:
         # Find next memory to embed
-        row = await execute_query_fetchone("""
+        row = await query_fetchone("""
             SELECT id, content FROM memories
             WHERE id IN (
                 SELECT rec FROM embedding_schedule WHERE started_at IS NULL AND finished_at IS NULL LIMIT 1
@@ -22,7 +22,7 @@ async def embed_loop():
             mem_id, content = row
 
             # Mark as started
-            await execute_query_fetchone("""
+            await query_fetchone("""
                 UPDATE embedding_schedule
                 SET started_at = NOW()
                 WHERE rec = %s AND started_at IS NULL
@@ -38,7 +38,7 @@ async def embed_loop():
                     embedding = await ollama.embed(content)
 
                 # Update memory with embedding
-                await execute_query_fetchone("""
+                await query_fetchone("""
                     UPDATE memories
                     SET content_embedding = %s
                     WHERE id = %s
@@ -46,7 +46,7 @@ async def embed_loop():
                 """, params=(embedding, mem_id))
 
                 # Mark as complete
-                await execute_query_fetchone("""
+                await query_fetchone("""
                     UPDATE embedding_schedule
                     SET finished_at = NOW()
                     WHERE rec = %s
@@ -57,7 +57,7 @@ async def embed_loop():
 
             except Exception as e:
                 # Record error
-                await execute_query_fetchone("""
+                await query_fetchone("""
                     UPDATE embedding_schedule
                     SET error_msg = %s
                     WHERE rec = %s

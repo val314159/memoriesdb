@@ -37,7 +37,7 @@ async def get_pool():
             
     return _pool
 
-async def execute_query_fetchall(
+async def query_fetchall(
     query: str,
     params: Optional[tuple] = None,
     as_dict: bool = False
@@ -68,7 +68,7 @@ async def execute_query_fetchall(
             
             return results
 
-async def execute_query(
+async def query(
     query: str,
     params: Optional[tuple] = None,
     as_dict: bool = False
@@ -128,7 +128,7 @@ async def execute(
             duration = time.time() - start_time
             logger.debug(f"Statement executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
 
-async def execute_query_fetchone(
+async def query_fetchone(
     query: str,
     params: Optional[tuple] = None,
     as_dict: bool = False
@@ -174,7 +174,7 @@ async def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
     FROM memories
     WHERE id = %s
     """
-    return await execute_query_fetchone(query, (memory_id,), as_dict=True)
+    return await query_fetchone(query, (memory_id,), as_dict=True)
 
 async def create_memory(user_id: str, content: str) -> str:
     """Create a new memory
@@ -191,7 +191,7 @@ async def create_memory(user_id: str, content: str) -> str:
     VALUES (%s, %s)
     RETURNING id
     """
-    result = await execute_query_fetchone(query, (user_id, content))
+    result = await query_fetchone(query, (user_id, content))
     return result[0] if result else None
 
 async def search_memories_vector(
@@ -242,7 +242,7 @@ async def search_memories_vector(
     params = [query_embedding] + params + [similarity_threshold, limit]
     
     results = []
-    async for row in await execute_query(query, tuple(params), as_dict=True):
+    async for row in await query(query, tuple(params), as_dict=True):
         results.append(row)
     return results
 
@@ -262,7 +262,7 @@ async def create_memory_edge(from_id: str, to_id: str, edge_type: str) -> str:
     VALUES (%s, %s, %s)
     RETURNING id
     """
-    result = await execute_query_fetchone(query, (from_id, to_id, edge_type))
+    result = await query_fetchone(query, (from_id, to_id, edge_type))
     return result[0] if result else None
 
 # Additional utility functions can be added below as needed
