@@ -98,8 +98,14 @@ async def get_connected_memories(memory_id: str) -> Dict[str, List[Dict[str, Any
     WHERE e.to_id = %s
     """
     
-    outgoing = await db_utils.execute_query(query_out, (memory_id,), fetch=True, as_dict=True) or []
-    incoming = await db_utils.execute_query(query_in, (memory_id,), fetch=True, as_dict=True) or []
+    # Collect results using streaming interface
+    outgoing = []
+    async for row in await db_utils.execute_query(query_out, (memory_id,), as_dict=True):
+        outgoing.append(row)
+        
+    incoming = []
+    async for row in await db_utils.execute_query(query_in, (memory_id,), as_dict=True):
+        incoming.append(row)
     
     return {
         "outgoing": outgoing,

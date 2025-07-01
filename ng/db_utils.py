@@ -48,25 +48,22 @@ async def get_pool():
 async def execute_query(
     query: str,
     params: Optional[tuple] = None,
-    fetch: bool = False,
-    fetch_one: bool = False,
     as_dict: bool = False
-) -> Union[List[tuple], Dict[str, Any], None]:
-    """Execute a SQL query and optionally return results
+):
+    """Execute a SQL query and return an async iterator for streaming results
     
     Args:
         query: The SQL query to execute
         params: Optional parameters for the query
-        fetch: If True, fetch and return all results
-        fetch_one: If True, fetch and return only the first row
-        as_dict: If True, return results as dictionaries
+        as_dict: If True, return rows as dictionaries
     
     Returns:
-        Query results or None
+        AsyncIterator yielding rows one at a time
     """
     pool = await get_pool()
     start_time = time.time()
     conn = None
+    cursor = None
     
     try:
         # Handle both pooled and direct connections
@@ -80,29 +77,60 @@ async def execute_query(
         if as_dict:
             conn.row_factory = dict_row
             
-        async with conn.cursor() as cur:
-            await cur.execute(query, params)
-            
-            if fetch_one:
-                result = await cur.fetchone()
-            elif fetch:
-                result = await cur.fetchall()
-            else:
-                result = None
-                
-            duration = time.time() - start_time
-            logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
-            return result
+        # Use server-side named cursor for streaming
+        cursor = await conn.cursor(name=f"stream_{int(time.time()*1000)}")
+        await cursor.execute(query, params)
+        
+        # Return an async generator
+        async def result_generator():
+            try:
+                async for row in cursor:
+                    yield row
+            finally:
+                # Clean up cursor and connection when done
+                await cursor.close()
+                if conn and not has_pool_package:
+                    await conn.close()
+                    
+        duration = time.time() - start_time
+        logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
+        return result_generator()
             
     except Exception as e:
         duration = time.time() - start_time
         logger.error(f"Query failed after {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
         logger.error(f"Error: {str(e)}")
-        raise
-    finally:
-        # Only close non-pooled connections
+        # Clean up resources on error
+        if cursor and not cursor.closed:
+            await cursor.close()
         if conn and not has_pool_package:
             await conn.close()
+        raise
+
+async def execute_query_fetchone(
+    query: str,
+    params: Optional[tuple] = None,
+    as_dict: bool = False
+) -> Optional[Union[tuple, Dict[str, Any]]]:
+    """Execute a SQL query and return a single row
+    
+    A thin wrapper around execute_query that returns just the first row or None
+    
+    Args:
+        query: The SQL query to execute
+        params: Optional parameters for the query
+        as_dict: If True, return row as dictionary
+    
+    Returns:
+        A single row or None if no results
+    """
+    result_gen = await execute_query(query, params, as_dict)
+    try:
+        # Just get the first result
+        return await anext(result_gen)
+    except StopAsyncIteration:
+        # No results found
+        return None
 
 async def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
     """Get a memory by ID
@@ -118,7 +146,7 @@ async def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
     FROM memories
     WHERE id = %s
     """
-    return await execute_query(query, (memory_id,), fetch_one=True, as_dict=True)
+    return await execute_query_fetchone(query, (memory_id,), as_dict=True)
 
 async def create_memory(user_id: str, content: str) -> str:
     """Create a new memory
@@ -135,7 +163,7 @@ async def create_memory(user_id: str, content: str) -> str:
     VALUES (%s, %s)
     RETURNING id
     """
-    result = await execute_query(query, (user_id, content), fetch_one=True)
+    result = await execute_query_fetchone(query, (user_id, content))
     return result[0] if result else None
 
 async def search_memories_vector(
@@ -185,7 +213,10 @@ async def search_memories_vector(
     # Add parameters in correct order
     params = [query_embedding] + params + [similarity_threshold, limit]
     
-    return await execute_query(query, tuple(params), fetch=True, as_dict=True)
+    results = []
+    async for row in await execute_query(query, tuple(params), as_dict=True):
+        results.append(row)
+    return results
 
 async def create_memory_edge(from_id: str, to_id: str, edge_type: str) -> str:
     """Create a directed edge between two memories
@@ -203,7 +234,7 @@ async def create_memory_edge(from_id: str, to_id: str, edge_type: str) -> str:
     VALUES (%s, %s, %s)
     RETURNING id
     """
-    result = await execute_query(query, (from_id, to_id, edge_type), fetch_one=True)
+    result = await execute_query_fetchone(query, (from_id, to_id, edge_type))
     return result[0] if result else None
 
 # Additional utility functions can be added below as needed
