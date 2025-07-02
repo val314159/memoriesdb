@@ -1,2 +1,17 @@
-embedding_worker: python embedding_worker.py
-vindexing_worker: python vindexing_worker.py
+
+embedding_worker: python -u embedding_worker.py
+vindexing_worker: python -u vindexing_worker.py
+
+# the communications hub
+#hub: sleep 1; uv run -m memoriesdb.hub
+hub: sleep 1; python -u h.py
+
+# load the latest conversation (history + model)
+#llm: sleep 2; uv run -m memoriesdb.convo
+llm: sleep 2; python -u c.py
+
+# loop and look for embeddings we need to make
+#emb: sleep 3; uv run -m memoriesdb.embedding_loop
+
+# python notebook
+#jupyter: jupyter notebook --allow-root --no-browser
