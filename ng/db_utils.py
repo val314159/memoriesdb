@@ -21,80 +21,66 @@ from logging_setup import get_logger
 logger = get_logger(__name__)
 
 # Build Database Connection String
-logged_dsn = DSN.replace(PG_PASS, "***") if PG_PASS else DSN
-logger.info(f"Database connection configured with DSN: {logged_dsn}")
+logger.info("Database connection configured with DSN: " +
+            DSN.replace(PG_PASS, "***") if PG_PASS else DSN)
 
 # Connection pool
 _pool = None
 
-# Global current user ID
+# A simple module-level variable to store the current user ID
 _CURRENT_USER_ID = None
 
-def get_current_user_id():
-    """Get the current user ID"""
+def get_current_user_id() -> Optional[str]:
+    """Get the current user ID from memory
+    
+    Returns:
+        Optional[str]: The current user ID or None if not set
+    """
     return _CURRENT_USER_ID
 
-# Sync version - no database interaction
-def set_current_user_id(user_id: str):
-    """Set the current user ID for the application
+def set_current_user_id(user_id: str = None):
+    """Set the current user ID in memory
+    
+    This sets the user ID in memory, and all subsequent database connections
+    will automatically use this user ID for auditing purposes.
     
     Args:
-        user_id: UUID of the user to set as current
+        user_id: UUID string of the user to set as current
     """
     global _CURRENT_USER_ID
     _CURRENT_USER_ID = user_id
     logger.info(f"Set current user ID to {user_id}")
 
-# Async version - with database session update
-async def set_session_user(user_id: str = None):
-    """Set the database session user via application_name
+async def _init_connection(conn):
+    """Initialize a database connection with the current user context
     
-    Args:
-        user_id: Optional UUID of user to set. If None, uses current user ID.
+    This runs automatically when a connection is acquired from the pool.
     """
-    # Use provided user_id or get the current one
-    user_id = user_id or get_current_user_id()
-    
-    if not user_id:
-        logger.warning("Attempted to set session user with no user ID")
-        return
-        
-    # Set the application_name session parameter for audit logging
-    try:
-        # Use string formatting because SET doesn't work with parameterized queries
-        await execute(f"SET application_name = 'user:{user_id}'")
-        logger.info(f"Set database session user to {user_id}")
-    except Exception as e:
-        logger.warning(f"Could not set application_name: {e}")
-        # Continue anyway - might be called before connection initialized:
-
-async def old_get_pool():
-    """Get or create the database connection pool"""
-    global _pool
-    
-    if not _pool:
-        _pool = psycopg_pool.AsyncConnectionPool(DSN, min_size=1, max_size=10)
-        await _pool.wait()
-            
-    return _pool
+    # Set application_name to include the current user ID if available
+    user_id = get_current_user_id()
+    if user_id:
+        async with conn.cursor() as cursor:
+            await cursor.execute(f"SET application_name = 'user:{user_id}'")
+        logger.debug(f"Set connection application_name to user:{user_id}")
+    return conn
 
 async def get_pool():
-    """Initialize the connection pool and set user context"""
+    """Get or create the database connection pool
+    
+    Each connection will be initialized with the current user context.
+    """
     global _pool
     if _pool is None:
-        _pool = psycopg_pool.AsyncConnectionPool(DSN, min_size=1, max_size=10)
-        
-        # Set up the user context for all connections in the pool if a user ID is set
-        user_id = get_current_user_id()
-        if user_id:
-            async with _pool.connection() as conn:
-                # This sets the user for the current session
-                await conn.execute(
-                    "SELECT set_config('app.current_user', %s, false)",
-                    (user_id,)
-                )
-    
-            
+        # Create connection pool with our connector function
+        _pool = psycopg_pool.AsyncConnectionPool(
+            DSN, 
+            min_size=1, 
+            max_size=10,
+            # We'll handle setting the user context when connections are acquired
+            configure=_init_connection
+        )
+        await _pool.wait()
+    # The _init_connection function will handle setting the user context for each connection
     return _pool
 
 
@@ -227,17 +213,18 @@ async def query_fetchone(
             
             return result
 
-async def get_memory_by_id(memory_id: str) -> Optional[Dict[str, Any]]:
-    """Get a memory by ID
+async def get_memory_by_id(memory_id: str) -> Optional[Dict]:
+    """Get a memory by its ID
     
     Args:
-        memory_id: The UUID of the memory to retrieve
-        
+        memory_id: UUID of the memory to retrieve
+    
     Returns:
-        Memory data as a dictionary or None if not found
+        Dictionary with memory fields or None if not found
     """
     query = """
-    SELECT id, user_id, content, content_hash, content_embedding, created_at, updated_at
+    SELECT id, content, content_hash, content_embedding, 
+           created_by, updated_by
     FROM memories
     WHERE id = %s
     """
@@ -313,23 +300,22 @@ async def search_memories_vector(
         results.append(row)
     return results
 
-async def create_memory_edge(from_id: str, to_id: str, edge_type: str) -> str:
+async def create_memory_edge(source_id: str, target_id: str, relation: str) -> str:
     """Create a directed edge between two memories
     
     Args:
-        from_id: Source memory UUID
-        to_id: Target memory UUID
-        edge_type: Type of relationship
+        source_id: Source memory UUID
+        target_id: Target memory UUID
+        relation: Type of relationship
         
     Returns:
         The UUID of the newly created edge
     """
     query = """
-    INSERT INTO memory_edges (from_id, to_id, edge_type)
+    INSERT INTO memory_edges (source_id, target_id, relation)
     VALUES (%s, %s, %s)
     RETURNING id
     """
-    result = await query_fetchone(query, (from_id, to_id, edge_type))
-    return result[0] if result else None
+    return await query_fetchone(query, (source_id, target_id, relation))
 
 # Additional utility functions can be added below as needed

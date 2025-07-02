@@ -7,7 +7,7 @@ from typing import Optional, List
 
 from db_utils import (
     query, query_fetchone, query_fetchall, execute,
-    get_current_user_id, set_current_user_id, set_session_user,
+    get_current_user_id, set_current_user_id,
     search_memories_vector,
     get_memory_by_id, create_memory, create_memory_edge
 )
@@ -161,11 +161,11 @@ async def test_execute():
     logger.info("✅ All execute tests passed!")
 
 async def test_memory_operations():
-    """Test memory CRUD operations"""
+    """Test memory-specific operations"""
     logger.info("Testing memory operations...")
     
-    # Set the user context for audit logging
-    await set_session_user(test_user_id)
+    # Ensure user context is set
+    set_current_user_id(test_user_id)
     
     # Test direct memory creation using execute
     memory_content = "Test memory content for database operations"
@@ -185,7 +185,7 @@ async def test_memory_operations():
     assert memory['content'] == memory_content, "Memory content does not match"
     logger.info(f"Retrieved memory: {memory['id']}")
     
-    # Cleanup: delete the test memory
+    # Clean up the memory record - related records will be deleted by CASCADE
     await execute("DELETE FROM memories WHERE id = %s", (memory_id,))
     
     # Verify deletion
@@ -199,7 +199,7 @@ async def test_memory_edges():
     logger.info("Testing memory edge operations...")
     
     # Set the user context for audit logging
-    await set_session_user(test_user_id)
+    set_current_user_id(test_user_id)
     
     # Create two test memories directly
     memory1_result = await query_fetchone(
@@ -218,8 +218,9 @@ async def test_memory_edges():
     
     # Create an edge
     edge_type = "references"
-    edge_id = await create_memory_edge(memory1_id, memory2_id, edge_type)
-    assert edge_id, "Failed to create memory edge"
+    edge_result = await create_memory_edge(memory1_id, memory2_id, edge_type)
+    assert edge_result, "Failed to create memory edge"
+    edge_id = edge_result[0] if isinstance(edge_result, tuple) else edge_result['id']
     logger.info(f"Created edge with ID: {edge_id}")
     
     # Verify edge exists
@@ -229,9 +230,9 @@ async def test_memory_edges():
         as_dict=True
     )
     assert edge, f"Failed to retrieve edge with ID: {edge_id}"
-    assert edge['from_id'] == memory1_id, "Edge source doesn't match"
-    assert edge['to_id'] == memory2_id, "Edge target doesn't match"
-    assert edge['edge_type'] == edge_type, "Edge type doesn't match"
+    assert edge['source_id'] == memory1_id, "Edge source doesn't match"
+    assert edge['target_id'] == memory2_id, "Edge target doesn't match"
+    assert edge['relation'] == edge_type, "Edge type doesn't match"
     
     # Cleanup
     await execute("DELETE FROM memory_edges WHERE id = %s", (edge_id,))
@@ -290,6 +291,51 @@ async def test_vector_search():
     
     logger.info("✅ Vector search tests completed")
 
+async def update_log_memory_change():
+    """Update the log_memory_change function in the database to use application_name"""
+    logger.info("Updating log_memory_change function to use application_name")
+    
+    sql = """
+    CREATE OR REPLACE FUNCTION log_memory_change()
+    RETURNS TRIGGER AS $$
+    DECLARE
+        app_name text;
+        user_id uuid;
+    BEGIN
+        -- Get application_name and parse user ID from it
+        BEGIN
+            app_name := current_setting('application_name');
+            
+            -- Parse user ID if in expected format 'user:uuid'
+            IF app_name LIKE 'user:%' THEN
+                user_id := substr(app_name, 6)::uuid;
+            ELSE
+                -- Default to NULL if not in expected format
+                user_id := NULL;
+            END IF;
+        EXCEPTION WHEN OTHERS THEN
+            -- Handle case when application_name is not set
+            user_id := NULL;
+        END;
+        
+        INSERT INTO audit_log (table_name, record_id, operation, old_values, new_values, changed_by)
+        VALUES (
+            TG_TABLE_NAME,
+            COALESCE(NEW.id, OLD.id),
+            TG_OP,
+            row_to_json(OLD),
+            row_to_json(NEW),
+            user_id
+        );
+        
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+    """
+    
+    await execute(sql)
+    logger.info("Successfully updated log_memory_change function")
+
 async def main():
     # Setup for basic tests
     await setup_test_table()
@@ -298,9 +344,11 @@ async def main():
     global test_user_id
     test_user_id = await get_or_create_test_user()
     
-    # Set up user context in both memory and database session
-    set_current_user_id(test_user_id)  # Set in memory
-    await set_session_user(test_user_id)  # Set in database session
+    # Update the log_memory_change function to use application_name
+    await update_log_memory_change()
+    
+    # Set up user context in memory - database sessions will use this automatically
+    set_current_user_id(test_user_id)
     
     try:
         # Run basic tests

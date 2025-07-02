@@ -78,7 +78,7 @@ CREATE TABLE audit_log (
 
 CREATE TABLE embedding_schedule (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v1mc(),
-    rec UUID NOT NULL REFERENCES memories(id),
+    rec UUID NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
     error_msg TEXT
@@ -89,7 +89,7 @@ CREATE INDEX idx_embedding_schedule_unstarted ON embedding_schedule (started_at)
 
 CREATE TABLE vindexing_schedule (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v1mc(),
-    rec UUID NOT NULL REFERENCES memories(id),
+    rec UUID NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
     error_msg TEXT
