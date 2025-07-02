@@ -1,89 +1,259 @@
-# MemoriesDB
+# MemoriesDB: The Memory Merchant's Ledger
 
-A vector-based memory system with graph relationships.
+A secure memory management system with vector search and graph relationships, built for tracking and trading memories with complete provenance.
 
 ## Overview
 
-MemoriesDB is a sophisticated system for storing, embedding, and querying memories with semantic search capabilities. It uses PostgreSQL with vector extensions to provide powerful search features across memory content.
+MemoriesDB is a sophisticated memory management platform that tracks the complete lifecycle of every memory while enabling powerful semantic search and relationship mapping. Built on PostgreSQL's robust security model, it provides a secure environment for memory management with built-in row-level security.
+
+## Key Features
+
+- **Memory Provenance**: Every memory is permanently linked to its creator through PostgreSQL's row-level security
+- **Audit Trail**: Complete transaction history with user attribution
+- **Ownership Tracking**: Clear chain of custody via database constraints
+- **Content Integrity**: SHA-256 hashing for content verification
+- **Secure Multi-tenancy**: Row-level security ensures complete isolation between users
+- **Vector Search**: Semantic search using pgvector with optimized cosine similarity
+- **Graph Relationships**: Track relationships between memories with customizable edge types
 
 ## Architecture
 
-### Database
+## Database Layer: The Memory Ledger
 
-- **PostgreSQL** with extensions:
-  - `uuid-ossp`: For UUID generation
-  - `pgcrypto`: For cryptographic functions
-  - `vector`: For vector operations and similarity search
-  - `pg_trgm`: For text similarity
+### Schema Overview
+
+1. **Core Tables**:
+   - `users`: Memory merchants and their credentials
+   - `memories`: Memory assets with content and embeddings
+   - `memory_edges`: Provenance and relationships between memories
+   - `audit_log`: Immutable record of all memory transactions
+   - `embedding_schedule`: Processing queue for new memories
+   - `vindexing_schedule`: Queue for search index updates
+
+2. **Provenance Features**:
+   - `created_by`/`updated_by` on all tables tracks memory ownership
+   - SHA-256 content hashing ensures memory integrity
+   - Complete audit trail of all memory transactions
+   - Immutable timestamps for creation and updates
+
+3. **Security Model**:
+   - Row-level security enforces memory boundaries
+   - Each memory is permanently linked to its creator
+   - Automatic user context tracking via `app.current_user`
+   - No direct table access - all operations through security policies
+
+### Extensions Used
+
+- `uuid-ossp`: UUID generation
+- `pgcrypto`: Cryptographic functions
+- `vector`: Vector similarity search
+- `pg_trgm`: Text pattern matching
+
+### Connection Management
+
+- Uses PgBouncer for efficient connection pooling
+- Transaction pooling mode for optimal performance
+- Automatic connection recycling
+- User context tracking via `application_name`
+
+## Memory Trading Workflow
+
+### Memory Lifecycle
+
+1. **Acquisition**:
+   - New memories are ingested with creator attribution
+   - Content is hashed for integrity verification
+   - Initial metadata is captured in the audit log
+
+2. **Processing**:
+   - Memory is queued for embedding generation
+   - Vector embeddings are generated and stored
+   - Search indexes are updated asynchronously
+
+3. **Trading**:
+   - Memory ownership is tracked through `created_by`
+   - All transfers are logged in the audit trail
+   - Row-level security ensures proper access control
+
+### Security Model
+
+- **User Context**:
+  ```sql
+  -- Set user context for the current transaction
+  SET app.current_user = 'user-uuid';
+  ```
+
+- **Row-Level Security**:
+  - Users can only access their own memories by default
+  - Memory sharing requires explicit grants
+  - All access attempts are logged
+
+- **Audit Trail**:
+  - Every memory operation is recorded
+  - Includes both before and after states
+  - Tracks which user performed each action
+  - Cannot be modified once created
+
+## Worker Architecture
+
+### Embedding Worker (`embedding_worker.py`)
+
+- **Purpose**: Processes new memories and generates vector embeddings
+- **Features**:
+  - Processes one memory at a time from the `embedding_schedule`
+  - Integrates with Ollama for embeddings
+  - Handles errors and retries
+  - Updates memory records with generated embeddings
+  - Queues view refreshes when complete
+
+### Vector Indexing Worker (`vindexing_worker.py`)
+
+- **Purpose**: Maintains materialized views for fast querying
+- **Features**:
+  - Processes completed embeddings from `vindexing_schedule`
+  - Refreshes the `memory_graph` materialized view
+  - Handles errors and retries
+  - Maintains search performance at scale
+
+1. **Application Layer**
+   - Python backend using async/await
+   - Connection pooling via PgBouncer
+   - Environment-based configuration
+
+2. **PgBouncer** (Connection Pooling)
+   - Manages database connections efficiently
+   - Handles connection pooling and multiplexing
+   - Configuration in `/etc/pgbouncer/pgbouncer.ini`
+   - Transaction pooling mode for optimal performance
+   - Automatic connection recycling
+
+3. **PostgreSQL** (Data Storage)
+   - Core database with extensions:
+     - `uuid-ossp`: For UUID generation
+     - `pgcrypto`: For cryptographic functions
+     - `vector`: For vector operations and similarity search
+     - `pg_trgm`: For text similarity
+   - Configuration in `postgresql.conf`
+   - Row-level security for multi-tenant isolation
 
 ### Core Tables
 
-- `users`: User management
+- `users`: User management and authentication
 - `memories`: Core memory storage with vector embeddings
-- `memory_edges`: Relationships between memories
-- `audit_log`: Change tracking and history
+- `memory_edges`: Graph relationships between memories
+- `audit_log`: Comprehensive change tracking
 - `embedding_schedule`: Queue for embedding processing
 - `vindexing_schedule`: Queue for view refresh operations
 
 ### Processing Flow
 
-1. New content is added to `memories` table
-2. Triggers automatically add records to `embedding_schedule`
-3. `embedding_worker.py` processes the queue and generates embeddings via Ollama
-4. Upon completion, records are added to `vindexing_schedule`
-5. `vindexing_worker.py` refreshes the materialized view to update the graph representation
+1. **Ingestion**
+   - New content is added to `memories` table
+   - Triggers automatically add records to `embedding_schedule`
+   - Audit log entry created
+
+2. **Embedding Generation**
+   - `embedding_worker.py` processes the queue asynchronously
+   - Generates vector embeddings using Ollama
+   - Updates the memory record with the embedding
+   - Adds record to `vindexing_schedule`
+
+3. **Indexing**
+   - `vindexing_worker.py` refreshes materialized views
+   - Updates graph representation for efficient querying
+   - Maintains search performance at scale
+
+### Connection Flow
+
+```
+[Application] → [PgBouncer Pool] → [PostgreSQL]
+    ↑                                  ↑
+    └──────── Worker Processes ────────┘
+```
 
 ## Components
 
-### Backend
+### Backend Services
 
-- **Workers**:
-  - `embedding_worker.py`: Asynchronous service for generating and storing vector embeddings
-  - `vindexing_worker.py`: Maintains the graph representation through materialized view refreshes
+1. **Embedding Worker** (`embedding_worker.py`)
+   - Asynchronous processing of embedding tasks
+   - Integrates with Ollama for vector generation
+   - Handles retries and error recovery
 
-- **Configuration**:
-  - `config.py`: Environment-based configuration settings
+2. **Vector Indexing Worker** (`vindexing_worker.py`)
+   - Maintains materialized views
+   - Optimizes query performance
+   - Handles view refresh scheduling
 
-### SQL Schema
+### Configuration
 
-The SQL implementation includes:
+- **Environment Variables** (`.env`):
+  - Database connection strings
+  - Feature flags
+  - Resource limits
 
-- Vector embeddings for semantic search
-- Graph structure with edge relationships
-- Triggers for automated workflow
-- Materialized view for efficient graph traversal
-- Row-level security for multi-user isolation
-- Advanced search functions (vector and hybrid)
+- **PgBouncer** (`/etc/pgbouncer/pgbouncer.ini`):
+  ```ini
+  [databases]
+  yourdb = host=localhost port=5432 dbname=yourdb
+  
+  [pgbouncer]
+  listen_port = 6432
+  auth_type = md5
+  pool_mode = transaction
+  max_client_conn = 1000
+  default_pool_size = 100
+  server_idle_timeout = 10
+  ```
 
 ## Deployment
 
-- Docker support via `Dockerfile`
-- Process management with `Procfile`
-- Development utilities in `Makefile`
-- PostgreSQL with pgvector using official Docker image (`pgvector/pgvector:latest`)
-- Custom pgvector Dockerfile available as backup option
+### Development
+- Single-container setup with Docker Compose
+- Automatic schema migration
+- Debugging tools enabled
 
-## Security Features
+### Production
+- Multi-container architecture:
+  - PgBouncer for connection pooling
+  - PostgreSQL with pgvector
+  - Worker processes
+- Configuration via environment variables
+- Health checks and monitoring
 
-- Content hashing for integrity verification
-- Row-level security policies for user isolation
-- Comprehensive audit logging
-- Connection-specific user context via `app.current_user`
+## Performance Considerations
 
-## Search Capabilities
+### Connection Pooling
+- PgBouncer reduces connection overhead
+- Optimal pool size: 2-4 × CPU cores
+- Monitor with `SHOW POOLS;`
 
-- Pure vector search using inner product on normalized vectors (optimized performance)
-- Hybrid search combining vector embeddings and trigram text similarity
-- Recursive graph traversal for relationship exploration
+### Vector Search
+- Normalized vectors for consistent performance
+- Optimized index types for different query patterns
+- Batch processing for bulk operations
 
-## Vector Strategy
+## Monitoring
 
-- All embeddings are normalized to unit length (L2 norm = 1)
-- Using inner product operator (`<#>`) for optimized similarity search
-- Similarity values range from -1 (opposite) to 1 (identical)
-- Default similarity threshold of 0.7 for relevant matches
+### Key Metrics
+- Connection pool utilization
+- Query performance
+- Queue lengths for workers
+- System resources
 
-## Development
+### Tools
+- Built-in PostgreSQL statistics
+- PgBouncer admin console
+- Custom metrics endpoints
 
-- Debug mode for testing without external dependencies
-- Error handling and logging in worker processes
+## Scaling
+
+### Vertical
+- Increase PostgreSQL resources
+- Optimize configuration
+- Add read replicas
+
+### Horizontal
+- Add more PgBouncer instances
+- Shard by user or data type
+- Implement caching layer

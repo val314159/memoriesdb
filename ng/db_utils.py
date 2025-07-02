@@ -318,4 +318,74 @@ async def create_memory_edge(source_id: str, target_id: str, relation: str) -> s
     """
     return await query_fetchone(query, (source_id, target_id, relation))
 
+async def generate_uuid() -> str:
+    """Generate a UUID using PostgreSQL's uuid-ossp extension
+    
+    This is more efficient than generating UUIDs in Python when you need to generate
+    many UUIDs in a transaction, as it avoids network round trips.
+    
+    Returns:
+        A new UUID string
+    """
+    result = await query_fetchone(
+        "SELECT gen_random_uuid()::text as uuid"
+    )
+    return result['uuid']
+
+def generate_uuid_ossp(node_id: bytes = None, clock_seq: int = None) -> str:
+    """Generate a time-based UUID (version 1) that matches PostgreSQL's uuid-ossp
+    
+    This implements the same algorithm as PostgreSQL's uuid_generate_v1() function
+    from the uuid-ossp extension. It generates a version 1 UUID using the current
+    UTC time, a node ID (MAC address), and a clock sequence.
+    
+    Args:
+        node_id: A 6-byte node identifier (default: uses host's MAC address)
+        clock_seq: Clock sequence (default: randomly generated)
+        
+    Returns:
+        A new UUID string in lowercase without curly braces
+        (e.g., 'a0eebc99-9c0b-11ec-b909-0242ac120002')
+    """
+    import uuid
+    import time
+    
+    # Get current UTC time in 100-nanosecond intervals since 1582-10-15 00:00:00
+    nanoseconds = time.time_ns()
+    uuid_epoch = 0x01b21dd213814000  # October 15, 1582 in 100ns intervals
+    timestamp = (nanoseconds // 100) + uuid_epoch
+    
+    # Split into high, mid, and low parts
+    time_low = timestamp & 0xffffffff
+    time_mid = (timestamp >> 32) & 0xffff
+    time_hi_version = ((timestamp >> 48) & 0x0fff) | 0x1000  # Sets version to 1
+    
+    # Generate clock sequence if not provided
+    if clock_seq is None:
+        import random
+        clock_seq = random.getrandbits(14)  # 14-bit clock sequence
+    
+    clock_seq_low = clock_seq & 0xff
+    clock_seq_hi_variant = ((clock_seq >> 8) & 0x3f) | 0x80  # Sets variant to RFC 4122
+    
+    # Get node ID (MAC address) if not provided
+    if node_id is None:
+        import uuid as uuid_module
+        node_id = uuid_module.getnode().to_bytes(6, byteorder='big')
+    
+    # Pack into bytes
+    uuid_bytes = (
+        time_low.to_bytes(4, byteorder='big') +
+        time_mid.to_bytes(2, byteorder='big') +
+        time_hi_version.to_bytes(2, byteorder='big') +
+        clock_seq_hi_variant.to_bytes(1, byteorder='big') +
+        clock_seq_low.to_bytes(1, byteorder='big') +
+        node_id
+    )
+    
+    # Create UUID and return as string
+    u = uuid.UUID(bytes=uuid_bytes)
+    return str(u).lower()
+
+
 # Additional utility functions can be added below as needed

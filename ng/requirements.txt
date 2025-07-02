@@ -2,3 +2,4 @@ psycopg[binary]==3.1.12
 psycopg_pool==3.1.8
 numpy
 ollama
+rich>=14.0.0
