@@ -27,7 +27,48 @@ logger.info(f"Database connection configured with DSN: {logged_dsn}")
 # Connection pool
 _pool = None
 
-async def get_pool():
+# Global current user ID
+_CURRENT_USER_ID = None
+
+def get_current_user_id():
+    """Get the current user ID"""
+    return _CURRENT_USER_ID
+
+# Sync version - no database interaction
+def set_current_user_id(user_id: str):
+    """Set the current user ID for the application
+    
+    Args:
+        user_id: UUID of the user to set as current
+    """
+    global _CURRENT_USER_ID
+    _CURRENT_USER_ID = user_id
+    logger.info(f"Set current user ID to {user_id}")
+
+# Async version - with database session update
+async def set_session_user(user_id: str = None):
+    """Set the database session user via application_name
+    
+    Args:
+        user_id: Optional UUID of user to set. If None, uses current user ID.
+    """
+    # Use provided user_id or get the current one
+    user_id = user_id or get_current_user_id()
+    
+    if not user_id:
+        logger.warning("Attempted to set session user with no user ID")
+        return
+        
+    # Set the application_name session parameter for audit logging
+    try:
+        # Use string formatting because SET doesn't work with parameterized queries
+        await execute(f"SET application_name = 'user:{user_id}'")
+        logger.info(f"Set database session user to {user_id}")
+    except Exception as e:
+        logger.warning(f"Could not set application_name: {e}")
+        # Continue anyway - might be called before connection initialized:
+
+async def old_get_pool():
     """Get or create the database connection pool"""
     global _pool
     
@@ -36,6 +77,32 @@ async def get_pool():
         await _pool.wait()
             
     return _pool
+
+async def get_pool():
+    """Initialize the connection pool and set user context"""
+    global _pool
+    if _pool is None:
+        _pool = psycopg_pool.AsyncConnectionPool(DSN, min_size=1, max_size=10)
+        
+        # Set up the user context for all connections in the pool if a user ID is set
+        user_id = get_current_user_id()
+        if user_id:
+            async with _pool.connection() as conn:
+                # This sets the user for the current session
+                await conn.execute(
+                    "SELECT set_config('app.current_user', %s, false)",
+                    (user_id,)
+                )
+    
+            
+    return _pool
+
+
+
+
+
+
+
 
 async def query_fetchall(
     query: str,
