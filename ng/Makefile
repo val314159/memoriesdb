@@ -108,7 +108,7 @@ reset-db: pgvector-wait
 	@echo "Resetting database schema..."
 	docker exec -i pgvector psql -U memories_user -d memories -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	@echo "Schema dropped, recreating..."
-	make setup-db
+	bash -c "set -a ; . .env ; make setup-db"
 
 # Memories container management
 M = --rm --env-file=.env --network=host --name memories memories
