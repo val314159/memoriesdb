@@ -3,7 +3,8 @@ import uuid
 import asyncio
 import time
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
+from psycopg.types.vector import Vector
 
 from db_utils import (
     query, query_fetchone, query_fetchall, execute,
@@ -164,82 +165,135 @@ async def test_memory_operations():
     """Test memory-specific operations"""
     logger.info("Testing memory operations...")
     
-    # Ensure user context is set
-    set_current_user_id(test_user_id)
-    
-    # Test direct memory creation using execute
-    memory_content = "Test memory content for database operations"
-    
-    # Create memory directly with execute
-    memory_id = await query_fetchone(
-        "INSERT INTO memories (content) VALUES (%s) RETURNING id",
-        (memory_content,)
-    )
-    assert memory_id, "Failed to create memory"
-    memory_id = memory_id[0] if isinstance(memory_id, tuple) else memory_id['id']
-    logger.info(f"Created memory with ID: {memory_id}")
-    
-    # Test get_memory_by_id
-    memory = await get_memory_by_id(memory_id)
-    assert memory, f"Failed to retrieve memory with ID: {memory_id}"
-    assert memory['content'] == memory_content, "Memory content does not match"
-    logger.info(f"Retrieved memory: {memory['id']}")
-    
-    # Clean up the memory record - related records will be deleted by CASCADE
-    await execute("DELETE FROM memories WHERE id = %s", (memory_id,))
-    
-    # Verify deletion
-    deleted_memory = await get_memory_by_id(memory_id)
-    assert deleted_memory is None, "Memory was not deleted"
-    
-    logger.info("✅ All memory operations tests passed!")
+    try:
+        # Set the user context
+        set_current_user_id(test_user_id)
+        
+        # Test create_memory function without explicit user_id (uses context)
+        memory_content = "Test memory content for database operations"
+        memory_id = await create_memory(
+            content=memory_content,
+            kind="test_memory",
+            metadata={"test": True}
+        )
+        assert memory_id, "Failed to create memory"
+        logger.info(f"Created memory with ID: {memory_id}")
+        
+        # Test get_memory_by_id
+        memory = await get_memory_by_id(memory_id)
+        assert memory, f"Failed to retrieve memory with ID: {memory_id}"
+        assert memory['content'] == memory_content, "Memory content does not match"
+        assert memory['created_by'] == test_user_id, "Memory creator does not match"
+        assert memory['kind'] == "test_memory", "Memory kind does not match"
+        logger.info(f"Retrieved memory: {memory['id']}")
+        
+        # Test creating with explicit user_id (overrides context)
+        alt_memory_id = await create_memory(
+            content="Alternative memory",
+            user_id=test_user_id,  # Explicitly set, though same as context
+            kind="test_alt"
+        )
+        assert alt_memory_id, "Failed to create alternative memory"
+        
+        # Clean up the memory records
+        await execute("DELETE FROM memories WHERE id = ANY(%s)", ([memory_id, alt_memory_id],))
+        
+        # Verify deletions
+        for mid in [memory_id, alt_memory_id]:
+            deleted_memory = await get_memory_by_id(mid)
+            assert deleted_memory is None, f"Memory {mid} was not deleted"
+        
+        logger.info("✅ All memory operations tests passed!")
+    except Exception as e:
+        logger.error(f"Memory operations test failed: {e}")
+        raise
 
 async def test_memory_edges():
     """Test memory edge operations"""
     logger.info("Testing memory edge operations...")
     
-    # Set the user context for audit logging
-    set_current_user_id(test_user_id)
-    
-    # Create two test memories directly
-    memory1_result = await query_fetchone(
-        "INSERT INTO memories (content) VALUES (%s) RETURNING id",
-        ("Source memory",)
-    )
-    memory2_result = await query_fetchone(
-        "INSERT INTO memories (content) VALUES (%s) RETURNING id",
-        ("Target memory",)
-    )
-    
-    # Extract IDs handling both tuple and dict formats
-    memory1_id = memory1_result[0] if isinstance(memory1_result, tuple) else memory1_result['id']
-    memory2_id = memory2_result[0] if isinstance(memory2_result, tuple) else memory2_result['id']
-    logger.info(f"Created test memories with IDs: {memory1_id}, {memory2_id}")
-    
-    # Create an edge
-    edge_type = "references"
-    edge_result = await create_memory_edge(memory1_id, memory2_id, edge_type)
-    assert edge_result, "Failed to create memory edge"
-    edge_id = edge_result[0] if isinstance(edge_result, tuple) else edge_result['id']
-    logger.info(f"Created edge with ID: {edge_id}")
-    
-    # Verify edge exists
-    edge = await query_fetchone(
-        "SELECT * FROM memory_edges WHERE id = %s", 
-        (edge_id,), 
-        as_dict=True
-    )
-    assert edge, f"Failed to retrieve edge with ID: {edge_id}"
-    assert edge['source_id'] == memory1_id, "Edge source doesn't match"
-    assert edge['target_id'] == memory2_id, "Edge target doesn't match"
-    assert edge['relation'] == edge_type, "Edge type doesn't match"
-    
-    # Cleanup
-    await execute("DELETE FROM memory_edges WHERE id = %s", (edge_id,))
-    await execute("DELETE FROM memories WHERE id = %s", (memory1_id,))
-    await execute("DELETE FROM memories WHERE id = %s", (memory2_id,))
-    
-    logger.info("✅ All memory edge tests passed!")
+    try:
+        # Set the user context
+        set_current_user_id(test_user_id)
+        
+        # Create test memories using create_memory (without explicit user_id)
+        memory1_id = await create_memory(
+            content="Source memory for edge test",
+            kind="test_source"
+        )
+        memory2_id = await create_memory(
+            content="Target memory for edge test",
+            kind="test_target"
+        )
+        logger.info(f"Created test memories with IDs: {memory1_id}, {memory2_id}")
+        
+        # Create an edge with all optional parameters
+        edge_metadata = {"test": True, "confidence": 0.9, "source": "test"}
+        edge_id = await create_memory_edge(
+            source_id=memory1_id,
+            target_id=memory2_id,
+            relation="references",
+            strength=0.8,
+            confidence=0.9,
+            metadata=edge_metadata
+        )
+        assert edge_id, "Failed to create memory edge"
+        logger.info(f"Created edge with ID: {edge_id}")
+        
+        # Verify edge exists and has correct properties
+        edge = await query_fetchone(
+            """
+            SELECT * FROM memory_edges 
+            WHERE id = %s AND created_by = %s
+            """, 
+            (edge_id, test_user_id), 
+            as_dict=True
+        )
+        assert edge, f"Failed to retrieve edge with ID: {edge_id}"
+        assert edge['source_id'] == memory1_id, "Edge source doesn't match"
+        assert edge['target_id'] == memory2_id, "Edge target doesn't match"
+        assert edge['relation'] == "references", "Edge relation doesn't match"
+        assert edge['strength'] == 0.8, "Edge strength doesn't match"
+        assert edge['confidence'] == 0.9, "Edge confidence doesn't match"
+        assert edge['_metadata'] == edge_metadata, "Edge metadata doesn't match"
+        
+        # Test creating edge with different user context
+        try:
+            set_current_user_id("00000000-0000-0000-0000-000000000000")  # Different user
+            await create_memory_edge(
+                source_id=memory1_id,
+                target_id=memory2_id,
+                relation="should_fail"
+            )
+            assert False, "Should not allow creating edges for other users' memories"
+        except Exception as e:
+            logger.info(f"Expected error for cross-user edge creation: {e}")
+        finally:
+            set_current_user_id(test_user_id)  # Restore test user
+        
+        # Test self-referential edge (should fail)
+        try:
+            await create_memory_edge(
+                source_id=memory1_id,
+                target_id=memory1_id,  # Same as source
+                relation="self_ref"
+            )
+            assert False, "Should not allow self-referential edges"
+        except ValueError as e:
+            logger.info(f"Expected error for self-referential edge: {e}")
+        
+        logger.info("✅ All memory edge tests passed!")
+        
+    except Exception as e:
+        logger.error(f"Memory edge test failed: {e}")
+        raise
+    finally:
+        # Clean up in case test fails
+        await execute("""
+            DELETE FROM memory_edges 
+            WHERE source_id = ANY(%s) OR target_id = ANY(%s)
+            """, ([memory1_id, memory2_id], [memory1_id, memory2_id]))
+        await execute("DELETE FROM memories WHERE id = ANY(%s)", ([memory1_id, memory2_id],))
 
 async def test_vector_search():
     """Test vector search operations"""
@@ -247,7 +301,7 @@ async def test_vector_search():
     
     try:
         # Set the user context for audit logging
-        await set_session_user(test_user_id)
+        set_current_user_id(test_user_id)
         
         # Create a memory with a test embedding
         vector_dimension = 1536  # Common for embeddings

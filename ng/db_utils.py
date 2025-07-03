@@ -55,13 +55,16 @@ async def _init_connection(conn):
     """Initialize a database connection with the current user context
     
     This runs automatically when a connection is acquired from the pool.
+    Sets both application_name for audit logging and app.current_user for RLS.
     """
-    # Set application_name to include the current user ID if available
     user_id = get_current_user_id()
     if user_id:
         async with conn.cursor() as cursor:
+            # Set application_name for audit logging
             await cursor.execute(f"SET application_name = 'user:{user_id}'")
-        logger.debug(f"Set connection application_name to user:{user_id}")
+            # Set app.current_user for RLS policies
+            await cursor.execute("SET app.current_user = %s", (user_id,))
+        logger.debug(f"Initialized connection for user: {user_id}")
     return conn
 
 async def get_pool():
@@ -244,23 +247,69 @@ async def get_memory_by_id(memory_id: str) -> Optional[Dict]:
     """
     return await query_fetchone(query, (memory_id,), as_dict=True)
 
-async def create_memory(user_id: str, content: str) -> str:
+async def create_memory(
+    content: str, 
+    user_id: Optional[str] = None,
+    kind: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    content_embedding: Optional[list] = None
+) -> str:
     """Create a new memory
     
     Args:
-        user_id: The UUID of the user creating the memory
-        content: The content of the memory
+        content: The content of the memory (required)
+        user_id: Optional UUID of the user creating the memory. 
+                If not provided, uses the current user context.
+        kind: Optional type/category of the memory
+        metadata: Optional JSON metadata to store with the memory
+        content_embedding: Optional vector embedding of the content
         
     Returns:
         The UUID of the newly created memory
+        
+    Raises:
+        ValueError: If content is empty or no user context is available
     """
+    if not content:
+        raise ValueError("Content cannot be empty")
+        
+    # Get user from context if not provided
+    if not user_id:
+        user_id = get_current_user_id()
+        if not user_id:
+            raise ValueError("No user context available. Call set_current_user_id() first or provide user_id.")
+    
     query = """
-    INSERT INTO memories (user_id, content)
-    VALUES (%s, %s)
+    INSERT INTO memories (
+        content, 
+        kind, 
+        _metadata, 
+        content_embedding,
+        created_by, 
+        updated_by
+    )
+    VALUES (%s, %s, %s, %s, %s, %s)
     RETURNING id
     """
-    result = await query_fetchone(query, (user_id, content))
-    return result[0] if result else None
+    
+    # Prepare parameters
+    params = (
+        content,
+        kind,
+        psycopg.types.json.Jsonb(metadata) if metadata else None,
+        Vector(content_embedding) if content_embedding else None,
+        user_id,
+        user_id
+    )
+    
+    try:
+        result = await query_fetchone(query, params)
+        if not result:
+            raise ValueError("Failed to create memory: no ID returned")
+        return result[0]
+    except Exception as e:
+        logger.error(f"Error creating memory: {e}")
+        raise
 
 async def search_memories_vector(
     query_embedding: list,
@@ -276,7 +325,7 @@ async def search_memories_vector(
     
     Args:
         query_embedding: Normalized vector embedding of the search query (must be unit length)
-        user_id: Optional user ID to filter results
+        user_id: Optional user ID to filter results by created_by
         limit: Maximum number of results to return
         similarity_threshold: Minimum similarity threshold (-1 to 1 scale, where 1 is identical).
                              Higher values return fewer but more relevant results.
@@ -284,21 +333,27 @@ async def search_memories_vector(
     Returns:
         List of memories matching the query, sorted by decreasing similarity
     """
-    user_filter = "AND user_id = %s" if user_id else ""
-    params = []
-    if user_id:
-        params.append(user_id)
-    
     # Using the WITH clause to avoid repeating the embedding calculation
     # <#> returns negative inner product, so we multiply by -1 to get similarity
     # Where similarity of 1 = identical vectors, 0 = orthogonal, -1 = opposite
-    query = f"""
+    query = """
     WITH similarity_calc AS (
-        SELECT id, user_id, content, created_at, updated_at,
+        SELECT id, content, content_hash, created_by, updated_by,
                (content_embedding <#> %s) * -1 as similarity
         FROM memories
         WHERE content_embedding IS NOT NULL
-        {user_filter}
+        AND _deleted_at IS NULL
+    """
+    
+    params = [query_embedding]
+    
+    # Add user filter if provided
+    if user_id:
+        query += " AND created_by = %s"
+        params.append(user_id)
+    
+    # Complete the query
+    query += """
     )
     SELECT * FROM similarity_calc
     WHERE similarity > %s
@@ -306,31 +361,68 @@ async def search_memories_vector(
     LIMIT %s
     """
     
-    # Add parameters in correct order
-    params = [query_embedding] + params + [similarity_threshold, limit]
+    # Add remaining parameters
+    params.extend([similarity_threshold, limit])
     
-    results = []
-    async for row in await query(query, tuple(params), as_dict=True):
-        results.append(row)
-    return results
+    # Execute the query and return results
+    return await query_fetchall(query, tuple(params), as_dict=True)
 
-async def create_memory_edge(source_id: str, target_id: str, relation: str) -> str:
+async def create_memory_edge(
+    source_id: str, 
+    target_id: str, 
+    relation: str,
+    strength: Optional[float] = None,
+    confidence: Optional[float] = None,
+    metadata: Optional[dict] = None
+) -> str:
     """Create a directed edge between two memories
     
     Args:
         source_id: Source memory UUID
         target_id: Target memory UUID
-        relation: Type of relationship
+        relation: Type of relationship (lowercase with underscores)
+        strength: Optional strength of the relationship (-1.1 to 1.1)
+        confidence: Optional confidence level (0.0 to 1.0)
+        metadata: Optional JSON metadata
         
     Returns:
         The UUID of the newly created edge
+        
+    Raises:
+        ValueError: If source_id equals target_id (self-reference)
     """
+    if source_id == target_id:
+        raise ValueError("Cannot create self-referential edge")
+    
+    # Get current user ID for created_by/updated_by
+    user_id = get_current_user_id()
+    if not user_id:
+        raise ValueError("No current user set. Call set_current_user_id() first.")
+    
+    # Prepare query and parameters
     query = """
-    INSERT INTO memory_edges (source_id, target_id, relation)
-    VALUES (%s, %s, %s)
+    INSERT INTO memory_edges 
+        (source_id, target_id, relation, strength, confidence, _metadata, created_by, updated_by)
+    VALUES 
+        (%s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING id
     """
-    return await query_fetchone(query, (source_id, target_id, relation))
+    
+    result = await query_fetchone(
+        query, 
+        (
+            source_id, 
+            target_id, 
+            relation,
+            strength,
+            confidence,
+            psycopg.types.json.Jsonb(metadata) if metadata else None,
+            user_id,
+            user_id
+        )
+    )
+    
+    return result[0] if result else None
 
 async def generate_uuid() -> str:
     """Generate a UUID using PostgreSQL's uuid-ossp extension
