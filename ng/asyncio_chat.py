@@ -62,64 +62,96 @@ async def handle_ws_message(msg: aiohttp.WSMessage) -> None:
 
 async def chat_client():
     """Main chat client function using asyncio."""
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.ws_connect(WS_URL) as ws:
-                print(f"Connected to {WS_URL}")
-                
-                # Start a task to handle incoming messages
-                async def listen_for_messages():
-                    try:
-                        async for msg in ws:
-                            if msg.type == aiohttp.WSMsgType.TEXT:
-                                await handle_ws_message(msg)
-                            elif msg.type == aiohttp.WSMsgType.CLOSED:
-                                print("\n[!] Connection closed by server")
-                                return
-                            elif msg.type == aiohttp.WSMsgType.ERROR:
-                                print(f"\n[!] Connection error: {ws.exception()}")
-                                return
-                    except ConnectionResetError:
-                        print("\n[!] Connection lost")
-                    except Exception as e:
-                        print(f"\n[!] Unexpected error: {e}")
-                    finally:
-                        if not ws.closed:
-                            await ws.close()
-                
-                # Start the message listener
-                listener = asyncio.create_task(listen_for_messages())
-                
-                # Main input loop
-                try:
-                    while True:
-                        content = await read_stdin()
-                        if content is None:  # EOF
-                            break
+    connection_lost = asyncio.Event()
+    
+    async def handle_connection():
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.ws_connect(WS_URL) as ws:
+                    print(f"Connected to {WS_URL}")
+                    
+                    # Start a task to handle incoming messages
+                    async def listen_for_messages():
+                        try:
+                            async for msg in ws:
+                                if msg.type == aiohttp.WSMsgType.TEXT:
+                                    await handle_ws_message(msg)
+                                elif msg.type == aiohttp.WSMsgType.CLOSED:
+                                    print("\n[!] Connection closed by server")
+                                    break
+                                elif msg.type == aiohttp.WSMsgType.ERROR:
+                                    print(f"\n[!] Connection error: {ws.exception()}")
+                                    break
+                        except ConnectionResetError:
+                            print("\n[!] Connection lost")
+                        except Exception as e:
+                            print(f"\n[!] Unexpected error: {e}")
+                        finally:
+                            connection_lost.set()
+                            if not ws.closed:
+                                await ws.close()
+                    
+                    # Start the message listener
+                    listener = asyncio.create_task(listen_for_messages())
+                    
+                    # Main input loop
+                    while not connection_lost.is_set():
+                        # Use asyncio.wait_for to periodically check connection status
+                        try:
+                            content = await asyncio.wait_for(read_stdin(), timeout=0.5)
+                            if content is None:  # EOF
+                                break
+                                
+                            # Handle role specification
+                            role = 'user'
+                            if content.startswith('system: '):
+                                role = 'system'
+                                content = content[len('system: '):].strip()
                             
-                        # Handle role specification
-                        role = 'user'
-                        if content.startswith('system: '):
-                            role = 'system'
-                            content = content[len('system: '):].strip()
+                            # Send the message
+                            try:
+                                await pub(ws, CH_IN, content, role=role)
+                            except ConnectionResetError:
+                                print("\n[!] Failed to send message - connection lost")
+                                break
+                                
+                        except asyncio.TimeoutError:
+                            # Check if connection was lost while waiting for input
+                            if connection_lost.is_set():
+                                break
+                            continue
+                        except asyncio.CancelledError:
+                            break
                         
-                        # Send the message
-                        await pub(ws, CH_IN, content, role=role)
-                        
-                except asyncio.CancelledError:
-                    pass
-                finally:
-                    # Clean up
+                    # Clean up listener task
                     if not listener.done():
                         listener.cancel()
                         try:
                             await listener
                         except:
                             pass
-                    
-        except Exception as e:
-            print(f"Connection error: {e}")
-            return 1
+                            
+            except Exception as e:
+                print(f"\n[!] Connection error: {e}")
+                connection_lost.set()
+    
+    # Run the connection handler
+    connection_task = asyncio.create_task(handle_connection())
+    
+    try:
+        await connection_task
+    except asyncio.CancelledError:
+        pass
+    finally:
+        # Ensure we clean up if still connected
+        if not connection_lost.is_set():
+            connection_lost.set()
+        if not connection_task.done():
+            connection_task.cancel()
+            try:
+                await connection_task
+            except:
+                pass
     return 0
 
 def main():
