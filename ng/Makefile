@@ -1,7 +1,7 @@
 # MemoriesDB Makefile
 
 # Declare all phony targets
-.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers debug debug-docker logs-dir test help
+.PHONY: all stop start restart dev clean realclean prune clean-all pgvector-start pgvector-stop pgvector-restart pgvector-wait pgvector-build pgvector-start-custom pgvector-stop-custom pgvector-start-official pgvector-stop-official memories-start memories-stop memories-restart memories-run setup-db db start-workers debug debug-docker logs-dir test help honcho
 
 # Variables
 PG = pg15
@@ -43,6 +43,9 @@ restart: pgvector-restart memories-restart
 
 # Interactive development mode (preserves data, includes code mounting for debugging)
 dev: pgvector-stop pgvector-start-custom pgvector-wait memories-debug
+
+honcho:
+	bash -c "set -a ; source .env; honcho start"
 
 clean:
 	find . -name \*~ -o -name .\*~ | xargs rm -fr
@@ -93,7 +96,8 @@ setup-db: pgvector-wait
 	@echo "Setting up database schema..."
 	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < sql/000_setup.sql
 	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < sql/001_memory_mesh.sql
-	@echo "Database schema setup complete"
+	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < sql/002_load_data.sql
+	@echo "Database schema and initial data setup complete"
 
 # Reset database schema (drop and recreate)
 reset-db: pgvector-wait

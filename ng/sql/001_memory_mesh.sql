@@ -169,7 +169,21 @@ EXECUTE FUNCTION update_content_hash();
 
 CREATE OR REPLACE FUNCTION log_memory_change()
 RETURNS TRIGGER AS $$
+DECLARE
+    app_name text;
+    user_id text;
 BEGIN
+    -- Get the application_name and extract user ID if it follows 'user:UUID' format
+    BEGIN
+        app_name := current_setting('application_name');
+        IF app_name LIKE 'user:%' THEN
+            user_id := substring(app_name from '^user:([0-9a-fA-F-]{36})$');
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        -- If application_name is not set or invalid, use NULL
+        user_id := NULL;
+    END;
+    
     INSERT INTO audit_log (table_name, record_id, operation, old_values, new_values, changed_by)
     VALUES (
         TG_TABLE_NAME,
@@ -177,7 +191,7 @@ BEGIN
         TG_OP,
         row_to_json(OLD),
         row_to_json(NEW),
-        current_setting('app.current_user')::UUID
+        user_id::uuid  -- This will be NULL if user_id is NULL or invalid
     );
     RETURN NEW;
 END;
