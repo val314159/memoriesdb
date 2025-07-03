@@ -163,12 +163,15 @@ async def query(
 async def execute(
     query: str,
     params: Optional[tuple] = None
-) -> None:
-    """Execute a SQL statement that doesn't return results (INSERT, UPDATE, DELETE, DDL, etc.)
+) -> Optional[list]:
+    """Execute a SQL statement and return results if there's a RETURNING clause.
     
     Args:
         query: The SQL statement to execute
         params: Optional parameters for the statement
+        
+    Returns:
+        List of results if the query has a RETURNING clause, None otherwise
     """
     start_time = time.time()
     pool = await get_pool()
@@ -176,10 +179,21 @@ async def execute(
     async with pool.connection() as conn:
         async with conn.cursor() as cursor:
             await cursor.execute(query, params)
-            await conn.commit()  # Explicitly commit changes
+            
+            # Check if the query has a RETURNING clause
+            has_returning = 'RETURNING' in query.upper()
+            
+            if has_returning:
+                result = await cursor.fetchall()
+            else:
+                result = None
+                
+            await conn.commit()
             
             duration = time.time() - start_time
             logger.debug(f"Statement executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")
+            
+            return result
 
 async def query_fetchone(
     query: str,
