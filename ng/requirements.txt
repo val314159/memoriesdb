@@ -3,3 +3,4 @@ psycopg_pool==3.1.8
 numpy
 ollama
 rich>=14.0.0
+uvloop>=0.19.0; sys_platform != 'win32'

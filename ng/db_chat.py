@@ -1,22 +1,32 @@
 #!/usr/bin/env python3
 """
-Database-enabled async chat client for MemoriesDB
+Database-enabled async chat client for MemoriesDB with uvloop for enhanced performance
 
 This chat client:
 1. Uses the system user (00000000-0000-0000-0000-000000000000)
 2. Saves all sent and received messages to the database
-3. Maintains conversation history
+3. Handles connection errors gracefully
+4. Supports multiple channels (llm-in/llm-out by default)
 """
 
+# Try to use uvloop if available (only on Unix-like systems)
+try:
+    import uvloop
+    uvloop.install()
+    print("Using uvloop for enhanced performance")
+except ImportError:
+    import asyncio
+    print("uvloop not available, using standard asyncio")
+
 import asyncio
+import aiohttp
 import json
 import os
 import sys
 import time
-import uuid
-import aiohttp
-from typing import Optional, Dict, Any, Tuple
-from db_utils import get_pool, set_current_user_id, execute, query_fetchone
+from typing import Dict, List, Any, Optional
+
+from db_utils import execute, set_current_user_id, query_fetchone, get_pool
 
 # Environment variables
 CH = os.getenv('CH', 'llm')
@@ -69,18 +79,35 @@ async def save_message(content: str, role: str, direction: str, metadata: Option
         return result[0][0]
     return None
 
+# Global reader for stdin
+stdin_reader = None
+stdin_protocol = None
+
+async def init_stdin():
+    """Initialize stdin reader once."""
+    global stdin_reader, stdin_protocol
+    if stdin_reader is None:
+        loop = asyncio.get_event_loop()
+        stdin_reader = asyncio.StreamReader()
+        stdin_protocol = asyncio.StreamReaderProtocol(stdin_reader)
+        await loop.connect_read_pipe(lambda: stdin_protocol, sys.stdin)
+
 async def read_stdin() -> Optional[str]:
     """Read a line from stdin asynchronously."""
-    loop = asyncio.get_event_loop()
-    reader = asyncio.StreamReader()
-    protocol = asyncio.StreamReaderProtocol(reader)
-    await loop.connect_read_pipe(lambda: protocol, sys.stdin)
+    global stdin_reader
+    
+    if stdin_reader is None:
+        await init_stdin()
     
     print("user> ", end='', flush=True)
-    line = await reader.readline()
-    if not line:
+    try:
+        line = await stdin_reader.readline()
+        if not line:
+            return None
+        return line.decode().strip()
+    except Exception as e:
+        print(f"\n[!] Error reading input: {e}")
         return None
-    return line.decode().strip()
 
 async def handle_ws_message(msg: aiohttp.WSMessage) -> None:
     """Handle incoming WebSocket messages."""
@@ -123,6 +150,9 @@ async def chat_client():
     # Set the system user for all database operations in this process
     # This only needs to be done once as it sets a module-level variable
     set_current_user_id(SYSTEM_USER_ID)
+    
+    # Initialize stdin reader
+    await init_stdin()
     
     async with aiohttp.ClientSession() as session:
         try:
