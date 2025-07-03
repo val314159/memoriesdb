@@ -5,6 +5,10 @@ import time
 import logging
 from typing import Optional, List
 
+# this whole file is almost certainly garbage
+
+'''
+
 from db_utils import (
     query, query_fetchone, query_fetchall, execute,
     get_current_user_id, set_current_user_id, close_pool, # Added close_pool
@@ -393,3 +397,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+'''

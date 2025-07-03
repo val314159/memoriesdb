@@ -183,10 +183,10 @@ clean-all: pgvector-stop
 
 # Tests
 test:
-	./venv/bin/python test_logging.py
-	./venv/bin/python test_connection.py
-	./venv/bin/python test_db_utils.py
-	./venv/bin/python test_core_api.py
+	bash -c "set -a ; . .env ; ./venv/bin/python test_logging.py"
+	bash -c "set -a ; . .env ; ./venv/bin/python test_connection.py"
+	bash -c "set -a ; . .env ; ./venv/bin/python test_db_utils.py"
+	bash -c "set -a ; . .env ; ./venv/bin/python test_core_api.py"
 
 # Help
 help:

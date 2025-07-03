@@ -4,6 +4,10 @@ import asyncio
 import time
 import logging
 from typing import Optional, List, Dict, Any
+
+# THIS WHOLE FILE SUCKS AFTER THIS POINT 
+
+'''
 from psycopg.types.vector import Vector
 
 from db_utils import (
@@ -421,3 +425,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+'''
