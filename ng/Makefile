@@ -91,12 +91,16 @@ pgvector-stop-custom:
 	docker rm $(PG_CONTAINER_NAME)
 	@echo "PostgreSQL container stopped and removed"
 
+# Get list of SQL migration files in order
+SQL_FILES = $(wildcard sql/*_*.sql)
+
 # Setup database schema
 setup-db: pgvector-wait
 	@echo "Setting up database schema..."
-	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < sql/000_setup.sql
-	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < sql/001_memory_mesh.sql
-	docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < sql/002_load_data.sql
+	@for sql_file in $(sort $(SQL_FILES)); do \
+		echo "Applying $$sql_file..."; \
+		docker exec -i pgvector psql -U $$POSTGRES_USER -d $$POSTGRES_DB < $$sql_file || exit 1; \
+	done
 	@echo "Database schema and initial data setup complete"
 
 # Reset database schema (drop and recreate)
