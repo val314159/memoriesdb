@@ -153,7 +153,8 @@ memories-debug: logs-dir
 refresh: memories-stop reset-db memories-debug
 	@echo "Environment refreshed with clean database and debug container"
 
-# This is where the second clean target was - removed to fix duplication
+honcho::
+	honcho start
 
 # Deep cleaning
 realclean: clean

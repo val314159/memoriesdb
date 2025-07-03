@@ -21,6 +21,11 @@ CREATE TABLE users (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create system user (zero UUID)
+INSERT INTO users (id, email, created_at)
+VALUES ('00000000-0000-0000-0000-000000000000', 'system@example.com', NOW())
+ON CONFLICT (id) DO NOTHING;
+
 -- ===========================
 -- MEMORIES
 -- ===========================
@@ -169,7 +174,26 @@ EXECUTE FUNCTION update_content_hash();
 
 CREATE OR REPLACE FUNCTION log_memory_change()
 RETURNS TRIGGER AS $$
+DECLARE
+    app_name text;
+    user_id uuid;
 BEGIN
+    -- Get application_name and parse user ID from it
+    BEGIN
+        app_name := current_setting('application_name');
+        
+        -- Parse user ID if in expected format 'user:uuid'
+        IF app_name LIKE 'user:%' THEN
+            user_id := substr(app_name, 6)::uuid;
+        ELSE
+            -- Default to NULL if not in expected format
+            user_id := NULL;
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        -- Handle case when application_name is not set
+        user_id := NULL;
+    END;
+    
     INSERT INTO audit_log (table_name, record_id, operation, old_values, new_values, changed_by)
     VALUES (
         TG_TABLE_NAME,
@@ -177,7 +201,7 @@ BEGIN
         TG_OP,
         row_to_json(OLD),
         row_to_json(NEW),
-        current_setting('app.current_user')::UUID
+        user_id
     );
     RETURN NEW;
 END;

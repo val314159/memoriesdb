@@ -1,6 +1,6 @@
 
-embedding_worker: python -u embedding_worker.py
-vindexing_worker: python -u vindexing_worker.py
+#embedding_worker: python -u embedding_worker.py
+#vindexing_worker: python -u vindexing_worker.py
 
 # the communications hub
 #hub: sleep 1; uv run -m memoriesdb.hub

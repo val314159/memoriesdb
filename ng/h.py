@@ -124,7 +124,7 @@ class Application(Bottle):
                 time.sleep(0.2)
                 print("Waiting...")
                 pass
-            
+            print("WHAT", repr(raw))
             time.sleep(0.2)
             
         finally:
