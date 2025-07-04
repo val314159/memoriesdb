@@ -9,11 +9,14 @@ the database for consistent error handling and connection management.
 
 import asyncio
 import logging
+import numpy as np
+import numpy.typing as npt
 import psycopg
 import psycopg_pool
 from psycopg.rows import dict_row
+from psycopg.types.vector import register_vector, Vector
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 from config import PG_USER, PG_PASS, PG_HOST, PG_PORT, PG_DB, DEBUG, DSN
 from logging_setup import get_logger
@@ -56,7 +59,11 @@ async def _init_connection(conn):
     
     This runs automatically when a connection is acquired from the pool.
     Sets both application_name for audit logging and app.current_user for RLS.
+    Also registers the vector type for pgvector support.
     """
+    # Register vector type for pgvector support
+    await register_vector(conn)
+    
     user_id = get_current_user_id()
     if user_id:
         async with conn.cursor() as cursor:
@@ -64,6 +71,8 @@ async def _init_connection(conn):
             await cursor.execute(f"SET application_name = 'user:{user_id}'")
             # Set app.current_user for RLS policies
             await cursor.execute("SET app.current_user = %s", (user_id,))
+            # Ensure pgvector extension is available
+            await cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
         logger.debug(f"Initialized connection for user: {user_id}")
     return conn
 
@@ -252,7 +261,7 @@ async def create_memory(
     user_id: Optional[str] = None,
     kind: Optional[str] = None,
     metadata: Optional[dict] = None,
-    content_embedding: Optional[list] = None
+    content_embedding: Optional[npt.ArrayLike] = None
 ) -> str:
     """Create a new memory
     
@@ -297,7 +306,7 @@ async def create_memory(
         content,
         kind,
         psycopg.types.json.Jsonb(metadata) if metadata else None,
-        Vector(content_embedding) if content_embedding else None,
+        Vector(_ensure_float32(content_embedding).tolist()) if content_embedding is not None else None,
         user_id,
         user_id
     )
@@ -311,8 +320,27 @@ async def create_memory(
         logger.error(f"Error creating memory: {e}")
         raise
 
+def _ensure_float32(array: npt.ArrayLike) -> npt.NDArray[np.float32]:
+    """Ensure input is a numpy float32 array.
+    
+    Args:
+        array: Input array or array-like object
+        
+    Returns:
+        np.ndarray with dtype=np.float32
+        
+    Raises:
+        ValueError: If input cannot be converted to float32 array
+    """
+    if not isinstance(array, np.ndarray):
+        array = np.asarray(array, dtype=np.float32)
+    elif array.dtype != np.float32:
+        array = array.astype(np.float32)
+    return array
+
+
 async def search_memories_vector(
-    query_embedding: list,
+    query_embedding: npt.ArrayLike,
     user_id: Optional[str] = None,
     limit: int = 10,
     similarity_threshold: float = 0.7
@@ -333,6 +361,12 @@ async def search_memories_vector(
     Returns:
         List of memories matching the query, sorted by decreasing similarity
     """
+    # Ensure input is float32 numpy array
+    query_embedding = _ensure_float32(query_embedding)
+    
+    # Convert to list for psycopg
+    query_embedding_list = query_embedding.tolist()
+    
     # Using the WITH clause to avoid repeating the embedding calculation
     # <#> returns negative inner product, so we multiply by -1 to get similarity
     # Where similarity of 1 = identical vectors, 0 = orthogonal, -1 = opposite
@@ -345,7 +379,7 @@ async def search_memories_vector(
         AND _deleted_at IS NULL
     """
     
-    params = [query_embedding]
+    params = [query_embedding_list]
     
     # Add user filter if provided
     if user_id:
@@ -364,8 +398,15 @@ async def search_memories_vector(
     # Add remaining parameters
     params.extend([similarity_threshold, limit])
     
-    # Execute the query and return results
-    return await query_fetchall(query, tuple(params), as_dict=True)
+    # Execute the query and get results
+    results = await query_fetchall(query, tuple(params), as_dict=True)
+    
+    # Ensure similarity scores are float32
+    for result in results:
+        if 'similarity' in result:
+            result['similarity'] = float(result['similarity'])  # Keep as Python float for JSON serialization
+    
+    return results
 
 async def create_memory_edge(
     source_id: str, 
@@ -424,7 +465,7 @@ async def create_memory_edge(
     
     return result[0] if result else None
 
-async def generate_uuid() -> str:
+async def generate_db_tuid() -> str:
     """Generate a UUID using PostgreSQL's uuid-ossp extension
     
     This is more efficient than generating UUIDs in Python when you need to generate
@@ -433,12 +474,13 @@ async def generate_uuid() -> str:
     Returns:
         A new UUID string
     """
+    raise Exception("Not implemented")
     result = await query_fetchone(
         "SELECT gen_random_uuid()::text as uuid"
     )
     return result['uuid']
 
-def generate_uuid_ossp(node_id: bytes = None, clock_seq: int = None) -> str:
+def generate_tuid(node_id: bytes = None, clock_seq: int = None) -> str:
     """Generate a time-based UUID (version 1) that matches PostgreSQL's uuid-ossp
     
     This implements the same algorithm as PostgreSQL's uuid_generate_v1() function
