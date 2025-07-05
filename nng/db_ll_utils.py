@@ -54,6 +54,7 @@ def set_current_user_id(user_id: str = None):
     global _CURRENT_USER_ID
     _CURRENT_USER_ID = user_id
     logger.info(f"Set current user ID to {user_id}")
+    pass
 
 async def _init_connection(conn):
     """Initialize a database connection with the current user context
@@ -67,12 +68,13 @@ async def _init_connection(conn):
     
     user_id = get_current_user_id()
     if user_id:
-        print("USERIDD", user_id)
+        print("USERID", user_id)
         await conn.execute(f"SET application_name = 'user:{user_id}'")
         await conn.execute("SELECT set_config('app.current_user', %s, false)", (str(user_id), ))
         await conn.commit()
         logger.debug(f"Initialized connection for user: {user_id}")
-
+        pass
+        
     return
 
 def _register_cleanup_hook():
