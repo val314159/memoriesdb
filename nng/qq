@@ -1,0 +1,31 @@
+import plotext as plt
+import numpy as np
+import time
+import os
+
+# Real-time system monitoring dashboard
+def live_monitor():
+   for i in range(50):
+       # Get system stats
+       cpu_times = []
+       mem_usage = []
+       
+       for j in range(20):
+           cpu = np.random.uniform(0, 100)  # Simulate CPU %
+           mem = 45 + 30 * np.sin(j * 0.3) + np.random.uniform(-5, 5)
+           cpu_times.append(cpu)
+           mem_usage.append(mem)
+       
+       # Clear and plot
+       plt.clear_data()
+       plt.plot(cpu_times, label="CPU %", color="red")
+       plt.plot(mem_usage, label="Memory %", color="blue")
+       plt.ylim(0, 100)
+       plt.title(f"Live System Monitor - Update {i+1}")
+       plt.xlabel("Time")
+       plt.ylabel("Usage %")
+       plt.show()
+       time.sleep(0.5)
+       os.system('clear' if os.name == 'posix' else 'cls')
+
+live_monitor()

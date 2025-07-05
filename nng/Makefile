@@ -32,6 +32,9 @@ setup-db: pgvector-wait
 db-connect:
 	set -a ; . ./.env ; bash -c "psql postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$(PG_PORT)/$$POSTGRES_DB"
 
+ipython:
+	set -a ; . ./.env ; uv run --active ipython
+
 # Reset database schema (drop and recreate)
 reset-db: pgvector-wait
 	@echo "Resetting database schema..."
