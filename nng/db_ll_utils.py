@@ -14,7 +14,8 @@ import numpy.typing as npt
 import psycopg
 import psycopg_pool
 from psycopg.rows import dict_row
-from pgvector.psycopg import register_vector
+#from pgvector.psycopg import register_vector
+from pgvector.psycopg import register_vector_async
 import time
 from typing import Any, Dict, List, Optional, Union, cast
 
@@ -62,7 +63,7 @@ async def _init_connection(conn):
     Also registers the vector type for pgvector support.
     """
     # Register vector type for pgvector support
-    await register_vector(conn)
+    await register_vector_async(conn)
     
     user_id = get_current_user_id()
     if user_id:
@@ -72,7 +73,8 @@ async def _init_connection(conn):
             # Set app.current_user for RLS policies
             await cursor.execute("SET app.current_user = %s", (user_id,))
             # Ensure pgvector extension is available
-            await cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            #await cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            pass
         logger.debug(f"Initialized connection for user: {user_id}")
     return conn
 
@@ -143,16 +145,24 @@ async def query_fetchone(
         A single row or None if no results
     """
     start_time = time.time()
+    print("A-1")
     pool = await get_pool()
+    print("A0", pool)
     
     # Simple direct implementation using context managers
     async with pool.connection() as conn:
+        print("A1", conn)
         if as_dict:
+            print("A2")
             conn.row_factory = dict_row
             
+        print("A3")
         async with conn.cursor() as cursor:
+            print("A4")
             await cursor.execute(query, params)
+            print("A5")
             result = await cursor.fetchone()
+            print("A6", result)
             
             duration = time.time() - start_time
             logger.debug(f"Query executed in {duration:.3f}s: {query[:100]}{'...' if len(query) > 100 else ''}")

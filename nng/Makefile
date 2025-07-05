@@ -28,6 +28,10 @@ setup-db: pgvector-wait
 	done
 	@echo "Database schema and initial data setup complete"
 
+# Database connection
+db-connect:
+	set -a ; . ./.env ; bash -c "psql postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$(PG_PORT)/$$POSTGRES_DB"
+
 # Reset database schema (drop and recreate)
 reset-db: pgvector-wait
 	@echo "Resetting database schema..."
