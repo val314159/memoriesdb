@@ -32,7 +32,7 @@ logger.info("Database connection configured with DSN: " +
 _pool = None
 
 # A simple module-level variable to store the current user ID
-_CURRENT_USER_ID = None
+_CURRENT_USER_ID = '00000000-0000-0000-0000-000000000000'
 
 def get_current_user_id() -> Optional[str]:
     """Get the current user ID from memory
@@ -75,6 +75,28 @@ async def _init_connection(conn):
 
     return
 
+def _register_cleanup_hook():
+    import asyncio
+    from functools import wraps
+
+    loop = asyncio.get_event_loop()
+    original_close = loop.close
+    
+    @wraps(original_close)
+    def patched_close():
+        # Clean up pool before loop closes
+        if _pool:
+            try:
+                loop.run_until_complete(_pool.close())
+            except RuntimeError:
+                pass  # Loop might already be closing
+            pass
+        original_close()
+        pass
+    
+    loop.close = patched_close
+    pass
+
 async def get_pool():
     """Get or create the database connection pool
     
@@ -90,6 +112,7 @@ async def get_pool():
             configure=_init_connection,
             open=False
         )
+        _register_cleanup_hook()
         await _pool.open(wait=True)
         pass
     return _pool
@@ -334,5 +357,13 @@ def generate_tuid(node_id: bytes = None, clock_seq: int = None) -> str:
     u = uuid.UUID(bytes=uuid_bytes)
     return str(u).lower()
 
+async def pool_wrap(main, *args):
+    try:
+        pool = await get_pool()
+        return await main(*args)
+    finally:
+        await pool.close()
+        pass
+    pass
 
 # Additional utility functions can be added below as needed

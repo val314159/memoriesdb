@@ -23,12 +23,38 @@ async def get_memory_by_id(memory_id: str) -> Optional[Dict]:
         Dictionary with memory fields or None if not found
     """
     query = """
-    SELECT id, content, content_hash, content_embedding, 
+    SELECT id, content, content_hash, content_embedding, _metadata,
            created_by, updated_by
     FROM memories
     WHERE id = %s
     """
-    return await query_fetchone(query, (memory_id,), as_dict=True)
+    ret = await query_fetchone(query, (memory_id,), as_dict=True)
+    ret.update(ret.pop('_metadata'))
+    return ret
+
+async def get_edge_by_id(edge_id: str) -> Optional[Dict]:
+    """Get an edge by its ID
+    
+    Args:
+        edge_id: UUID of the memory edge to retrieve
+    
+    Returns:
+        Dictionary with memory edge fields or None if not found
+    """
+    query = """
+    SELECT id, source_id, target_id, relation,
+    strength, confidence, _metadata, created_by, updated_by
+    FROM memory_edges
+    WHERE id = %s
+    """
+    print("QRY", query)
+    print("EID", edge_id)
+    ret = await query_fetchone(query, (edge_id,), as_dict=True)
+    print("RET", ret)
+    if ret:
+        ret.update(ret.pop('_metadata'))
+        pass
+    return ret
 
 async def create_memory(
     content: str, 
@@ -69,24 +95,25 @@ async def create_memory(
         _metadata, 
         content_embedding,
         created_by, 
-        updated_by
-    )
+        updated_by)
     VALUES (%s, %s, %s, %s, %s, %s)
     RETURNING id
     """
-    
+    print("SDFGF")
     # Prepare parameters
     params = (
         content,
         kind,
-        psycopg.types.json.Jsonb(metadata) if metadata else None,
+        psycopg.types.json.Jsonb(metadata) if metadata else '{}',
         Vector(_ensure_float32(content_embedding).tolist()) if content_embedding is not None else None,
         user_id,
         user_id
     )
+    print("SDFGF", params)
     
     try:
         result = await query_fetchone(query, params)
+        print("R", (result,))
         if not result:
             raise ValueError("Failed to create memory: no ID returned")
         return result[0]
@@ -98,8 +125,7 @@ async def search_memories_vector(
     query_embedding: npt.ArrayLike,
     user_id: Optional[str] = None,
     limit: int = 10,
-    similarity_threshold: float = 0.7
-) -> List[Dict[str, Any]]:
+    similarity_threshold: float = 0.7) -> List[Dict[str, Any]]:
     """Search memories by vector similarity using normalized vectors
     
     This function uses the <#> operator (negative inner product) which is optimized 
@@ -197,29 +223,51 @@ async def create_memory_edge(
     
     # Prepare query and parameters
     query = """
-    INSERT INTO memory_edges 
-        (source_id, target_id, relation, strength, confidence, _metadata, created_by, updated_by)
-    VALUES 
-        (%s, %s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO memory_edges (
+        source_id,
+        target_id,
+        relation,
+        strength,
+        confidence,
+        _metadata,
+        created_by,
+        updated_by)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING id
     """
-    
-    result = await query_fetchone(
-        query, 
-        (
-            source_id, 
-            target_id, 
-            relation,
-            strength,
-            confidence,
-            psycopg.types.json.Jsonb(metadata) if metadata else None,
-            user_id,
-            user_id
-        )
-    )
-    
-    return result[0] if result else None
 
+    # Prepare parameters
+    params = (
+        source_id, 
+        target_id, 
+        relation,
+        strength,
+        confidence,
+        psycopg.types.json.Jsonb(metadata) if metadata else '{}',
+        user_id,
+        user_id
+    )
+
+    try:
+        result = await query_fetchone(query, params)
+        print("R", (result,))
+        if not result:
+            raise ValueError("Failed to create memory: no ID returned")
+        return result[0]
+    except Exception as e:
+        logger.error(f"Error creating memory: {e}")
+        raise
 
 
 # Additional utility functions can be added below as needed
+
+
+async def test():
+    m1 = await create_memory("qwert")
+    m2 = await create_memory("qwert2")
+    e1 = await create_memory_edge(m1, m2, 'qaz')
+    print("XX 2", m1, m2, e1)
+    pass
+
+def pool_test():
+    asyncio.run(pool_wrap(test))
