@@ -55,6 +55,45 @@ def set_current_user_id(user_id: str = None):
     _CURRENT_USER_ID = user_id
     logger.info(f"Set current user ID to {user_id}")
 
+
+async def example_with_try_except_finally(pool: psycopg_pool.AsyncConnectionPool, sql: str):
+
+    conn = None  # Initialize connection to None
+    try:
+        # Obtain a connection from the pool
+        conn = await pool.getconn()
+
+        # Create a cursor
+        async with conn.cursor() as cur:
+            # Execute some SQL (this could potentially fail)
+
+            await cur.execute(sql)
+            #await cur.execute("INSERT INTO mytable (col1) VALUES ('some data')") # Replace with your SQL
+
+            # If everything goes well, commit the transaction
+            await conn.commit()
+
+            return conn
+            
+    except Exception as e:
+        # Handle the error
+        print(f"An error occurred: {e}")
+
+        # Rollback the transaction if it was started
+        if conn:  # Check if a connection was obtained before rolling back
+            await conn.rollback()
+
+            # Return the connection to the pool
+            await pool.putconn(conn)
+'''
+    finally:
+        # Always return the connection to the pool
+        if conn:
+            #await pool.putconn(conn)
+            print("WORKED", conn)
+            return conn
+'''
+
 async def _init_connection(conn):
     """Initialize a database connection with the current user context
     
@@ -67,16 +106,49 @@ async def _init_connection(conn):
     
     user_id = get_current_user_id()
     if user_id:
-        async with conn.cursor() as cursor:
+        print("USERIDD", user_id)
+        await conn.execute(f"SET application_name = 'user:{user_id}'")
+        await conn.execute("SELECT set_config('app.current_user', %s, false)", (str(user_id), ))
+        await conn.commit()
+        logger.debug(f"Initialized connection for user: {user_id}")
+
+    return
+
+
+'''
+
+        try:
+            # Obtain a connection from the pool
+            conn = await pool.getconn()
+
+            # Create a cursor
+            async with conn.cursor() as cur:
+                # Execute some SQL (this could potentially fail)
+
+
+        await conn.execute(f"SELECT set_config('app.current_user', '{user_id}', false)")        
+
+        #async with conn.cursor() as cursor:
             # Set application_name for audit logging
-            await cursor.execute(f"SET application_name = 'user:{user_id}'")
+            #await cursor.execute(f"SET application_name = 'user:{user_id}'")
             # Set app.current_user for RLS policies
-            await cursor.execute("SET app.current_user = %s", (user_id,))
+            #await cursor.execute( "SET app.current_user = %s", (user_id,))
+            
+            #await cursor.execute(f"SELECT set_config('app.current_user', '{user_id}', false)")
+
+            #print("RETSULT", list(await cursor.fetchall()))
+            
+            #await cursor.execute(f"SET app.current_user = '{user_id}'")
+            
             # Ensure pgvector extension is available
             #await cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
-            pass
+
+            #await cursor.close()
+            #pass
         logger.debug(f"Initialized connection for user: {user_id}")
+
     return conn
+        '''
 
 async def get_pool():
     """Get or create the database connection pool
@@ -86,15 +158,32 @@ async def get_pool():
     global _pool
     if _pool is None:
         # Create connection pool with our connector function
+        #_pool = psycopg_pool.AsyncConnectionPool(
         _pool = psycopg_pool.AsyncConnectionPool(
             DSN, 
             min_size=1, 
             max_size=10,
             # We'll handle setting the user context when connections are acquired
-            configure=_init_connection
+            configure=_init_connection,
+            open=False
         )
-        await _pool.wait()
+        x = await _pool.open(wait=True)
+        ##y = await _pool.wait()
+        #print("ZZZZ", (x, y))
     # The _init_connection function will handle setting the user context for each connection
+
+    #async with conn.cursor() as cursor:
+            # Set application_name for audit logging
+            #await cursor.execute(f"SET application_name = 'user:{user_id}'")
+            # Set app.current_user for RLS policies
+            #await cursor.execute( "SET app.current_user = %s", (user_id,))
+            
+            #await cursor.execute(f"SELECT set_config('app.current_user', '{user_id}', false)")
+
+            #print("RETSULT", list(await cursor.fetchall()))
+            
+            #await cursor.execute(f"SET app.current_user = '{user_id}'")    
+
     return _pool
 
 async def query_fetchall(
