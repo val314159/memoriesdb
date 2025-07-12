@@ -3,6 +3,13 @@ from gevent import monkey as _;_.patch_all()
 import os, sys, time, json, websocket, gevent
 from gevent.fileobject import FileObject
 
+#from util import load_history_from_yml
+#messages = load_history_from_yml()
+#for m in messages:
+#    print("MESSAGE:", m)
+#    pass
+#print('---')
+
 # This makes stdin's FD non-blocking and replaces sys.stdin with
 # a wrapper that is integrated into the event loop
 stdin = FileObject(sys.stdin)

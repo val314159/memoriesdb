@@ -1,8 +1,31 @@
 #!/usr/bin/env python3
+'''
+Let's assume we only have one convo at once!
+and we'll use a JSON file!
+whee!
+'''
 from gevent import monkey as _;_.patch_all()
 import os, time, json, websocket, ollama
 import funcs2 as funcs
-#from .api import *
+
+from util import load_history_from_yml
+
+messages = load_history_from_yml()
+print('---')
+for m in messages:
+    print("MESSAGE:", m)
+    pass
+print('---')
+
+filename = 'convo.jsonl'
+
+def load_records():
+    filename = 'convo.jsonl'
+    pass
+
+def save_record():
+    pass
+
 
 
 def recv(ws):
