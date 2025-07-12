@@ -1,1 +1,3 @@
-hub: hub/venv/bin/python -um hub
+hub: ../.venv/bin/python -um hub
+llm: ../.venv/bin/python -um llm
+
