@@ -51,10 +51,10 @@ class Convo:
         _.ws = ws
         pass
 
-    def send_output(_, content, role):
+    def send_output(_, content, role, done):
         #_id = insert_new_history(session_id, content, role=role)
         _.messages.append(dict(role=role, content=content))
-        return pub(_.ws, OUT_CHANNEL, content, role=role, done=True)
+        return pub(_.ws, OUT_CHANNEL, content, role=role, done=done)
 
     def append_user(_, content):
         #_id = insert_new_history(session_id, content, role='user')
@@ -62,7 +62,7 @@ class Convo:
         pass
 
     def append_tool(_, name, arguments, output):
-        print(">>>>>> APPEND TOOL")
+        print(">>>>>> APPEND TOOL", (name, arguments, output))
         fn_dict = dict(name=name, arguments=arguments)
         tool_calls = [ dict(function=fn_dict) ]
         content =  json.dumps( tool_calls )
@@ -73,7 +73,6 @@ class Convo:
         content = str(output)
         #_id = insert_new_history(session_id, content, role='tool', action="toolreturn")
         _.messages.append(dict(
-            #role='tool',
             role='assistant',
             content=content,
             name=name))
@@ -89,33 +88,35 @@ class Convo:
             return ollama.chat(_.model,
                                messages=_.messages,
                                tools=_.tools,
-                               #stream=True,
-                               #format='json',
+                               stream=True,
+                               format='json',
                                )
         
 
-    def process_tool_response_message(_, message):
+    def process_tool_response_message(_, message, done = None):
         if not message:
             print("4 NO MESSAGE")
             raise exit(1)
         elif     message.content and not message.tool_calls:
             print("5 RESPOND TO USER - THERE IS CONTENT RETURNED FROM TOOLCALL")
-            _.send_output(message.content, message.role)
+            _.send_output(message.content, message.role, done)
         elif not message.content and     message.tool_calls:
             print("6 THERE ARE TOOL CALLSZZZ")
             raise Exception('too deep')
         else:
-            raise Exception('wtf')
+            if not done:
+                raise Exception('wtf')
+            _.send_output(message.content, message.role, done)
         pass
 
-    def perform_tool_call(_, name, arguments):
+    def perform_tool_call(_, name, arguments, done):
         print("THERE IS A TOOL CALL (no content)")
         if name == 'respond_to_user':
             # DON'T call a function here, we'll just handle it right here ourselves
             role = 'assistant'
             content = arguments['message']
             print(">> RESPOND TO USER (VIA TOOL) <<", content)
-            _.send_output(content, role)
+            _.send_output(content, role, done)
         elif function_to_call := getattr(funcs, name, ''):
             print(">> EVAL FUNC TOOL CALL <<")
             print('Calling function:', name)
@@ -126,27 +127,41 @@ class Convo:
             print('Tell ollama about output; messages = ', _.messages)
             print("2 Waiting on ollama.chat()...")
             response = _.chat()
+            print(1,type(response))
+            print(2,type(response))
+            print(type(response))
+            print(type(response))
             if not response:
                 print("0 NO RESPONSE")
                 raise exit(7)
-            print("3 RESPONSE", response)
-            return _.process_tool_response_message(response.message)
+            print("33 RESPONSE", response)
+            for message in response:
+                print("MMM", message)
+                xx = _.process_tool_response_message(message.message, message.done)
+                print("XXX", (xx,))
+            else:
+                pass
         else:
             print('Function', name, 'not found')
             raise exit(1)
         pass
 
-    def process_message(_, message):
+    def process_message(_, message, done=None):
         if not message:
             print("NO MESSAGE")
             raise exit(1)
-        if not message.content and not message.tool_calls:
+        if message.get('content') is None and not message.tool_calls:
             print("THIS NO CONTENT AND NO TOOL CALLS (maybe an image?)")
             raise exit(5)
         if     message.content and not message.tool_calls:
             print("THERE IS CONTENT ONLY")
             print(">> RESPOND TO USER (DIRECTLY) <<", message.role, message.content)
-            _.send_output(message.content, message.role)
+            _.send_output(message.content, message.role, done)
+            ### elif not message.content and     message.tool_calls:
+        elif   message.content=='' and not message.tool_calls:
+            print("THERE IS CONTENT ONLY (BUT ITS BLANK)")
+            print(">> RESPOND TO USER (DIRECTLY) <<", message.role, message.content)
+            _.send_output(message.content, message.role, done)
             ### elif not message.content and     message.tool_calls:
         else:
             #assert(not message.content and     message.tool_calls)
@@ -157,8 +172,10 @@ class Convo:
                 print("THERE ARE TOOL CALLS (no content)")
                 pass
             assert( len(message.tool_calls) == 1 )
+            print("TOOL CA", message.tool_calls)
             tool_call = message.tool_calls[0].function
-            _.perform_tool_call(tool_call.name, tool_call.arguments)
+            print("TOOL CALL", tool_call)
+            _.perform_tool_call(tool_call.name, tool_call.arguments, done)
             pass
         pass
 
@@ -171,11 +188,23 @@ class Convo:
         _.append_user(user_input)
         print("_.messages =", json.dumps(_.messages))
         print("Waiting on ollama.chat()...")
-        #print(ConnectionError)
         response = _.chat()
         if not response:
             print("NO RESPONSE")
             raise exit(1)
+        print("PUBB..RESPONSE", type(response))
+        if str(type(response)) == "<class 'generator'>":
+            print("=========1")
+            for message in response:
+                print("==")
+                done = message.done
+                mesg = message.message
+                print("M..", message)
+                print("M.M", done, mesg)
+                _.process_message(mesg, done)
+                pass
+            print("=========")
+            return
         print("RESPONSE", response)
         return _.process_message(response.message)
 

@@ -5,11 +5,10 @@ forked_from: 0
 id: 1
 name: whatever
 # system might only be in the first one
-system: act like an ass. keep piling on.
+system: act like an ass. keep piling on. your favorite color is green, and you mention Ronald Reagan every other statement!
 embedding1: [1, 2, 3]
 ---
 user: tell me a joke
-mood: pensive
 ---
 assistant: you smell funny
 ---

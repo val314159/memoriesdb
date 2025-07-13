@@ -1,3 +1,3 @@
-hub: ../.venv/bin/python -um hub
-llm: ../.venv/bin/python -um llm
+hub: ../.venv/bin/python -um hub 1>/dev/null 2>/dev/null
+llm2: ../.venv/bin/python -um llm2
 
