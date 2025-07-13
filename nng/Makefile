@@ -28,15 +28,18 @@ setup-db: pgvector-wait
 	done
 	@echo "Database schema and initial data setup complete"
 
-chat::
-	../.venv/bin/python -um chat
-
 # Database connection
 db-connect:
 	set -a ; . ./.env ; bash -c "psql postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$(PG_PORT)/$$POSTGRES_DB"
 
+chat::
+	uv run --env-file .env -u -m chat
+
+honcho::
+	uv run honcho start
+
 ipython:
-	set -a ; . ./.env ; uv run --active ipython
+	uv run --env-file .env ipython
 
 # Reset database schema (drop and recreate)
 reset-db: pgvector-wait
