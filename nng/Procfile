@@ -1,3 +1,4 @@
 hub: ../.venv/bin/python -um hub 1>/dev/null 2>/dev/null
-llm2: ../.venv/bin/python -um llm2
+llm2: ../.venv/bin/python -um llm2 person2.txt
+
 

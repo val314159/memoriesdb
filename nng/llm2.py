@@ -8,8 +8,11 @@ from gevent import monkey as _;_.patch_all()
 import os, time, json, websocket, ollama
 import funcs2 as funcs
 
-from util import load_history_from_yml
+from util import load_history_from_yml, fork_history_to_yml
+from util import load_history_from_txt
+from util import start_history_to_yml
 
+# start_history_to_yml('xx.yml', a=1, b=2)
 
 def recv(ws):
     raw = ws.recv()
@@ -291,6 +294,16 @@ class Convo:
     pass
 
 if __name__=='__main__':
+    import sys
+    print("ARGV", sys.argv)
+    convo_file = sys.argv[1]
+    if   convo_file.endswith('.yml'):
+        fmessages = list( load_history_from_yml(convo_file) )
+    elif convo_file.endswith('.txt'):
+        fmessages = list( load_history_from_txt(convo_file) )
+    else:
+        raise Exception('bad file type')
+    
     #init()
 
     user_id = None
