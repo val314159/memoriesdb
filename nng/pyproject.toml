@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "bottle==0.13.4",
+    "docopt>=0.6.2",
     "gevent-websocket==0.10.1",
     "honcho>=2.0.0",
     "ipython>=8.37.0",

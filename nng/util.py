@@ -14,12 +14,12 @@ def fork_history_to_yml(filename='in.yml', **kw):
 
     fileroot = filename[:-3]
 
-    fork1 = dict(k)
+    fork1 = dict(kw)
     fork1['forked_from'] = fileroot
     fork1['filename'] = f'{fileroot}1.yml'
     start_history_to_yml(fork1['filename'])
 
-    fork2 = dict(k)
+    fork2 = dict(kw)
     fork2['forked_from'] = fileroot
     fork2['filename'] = f'{fileroot}2.yml'
     start_history_to_yml(fork2['filename'])
