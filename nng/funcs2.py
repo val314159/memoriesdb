@@ -95,9 +95,9 @@ def weather_forecast(location: str) -> str:
 
 
 
-def create_new_tweet(#title: str, description: str,
+def create_new_tweet(
     content: str,
-                     when: str
+    when: str
                      ) -> str:
   """
   this schedules/creates a new tweet event for social type of X/Twitter and also opens up a window for the user
@@ -217,12 +217,12 @@ subtract_two_numbers.tool = {
 }
 
 
-def xx():
-    print("XX1")
-    zzz = utils.get_display_to_user_func()
-    print("ZZZ", zzz)
-    print("XX9")
-    pass
+#def xx():
+#    print("XX1")
+#    zzz = utils.get_display_to_user_func()
+#    print("ZZZ", zzz)
+#    print("XX9")
+#    pass
 
 
 Tools = list(getattr(v, 'tool', v)
