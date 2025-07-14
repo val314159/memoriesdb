@@ -9,8 +9,8 @@
 
 -- Insert the system user if it doesn't exist
 -- This user will be used for system-generated content and operations
-INSERT INTO users (id, email, created_at)
-VALUES ('00000000-0000-0000-0000-000000000000', 'system@memoriesdb', NOW())
+INSERT INTO users (id, digest, email, created_at)
+VALUES ('00000000-0000-0000-0000-000000000000', md5('el passwordo'), 'system@memoriesdb', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- ===========================

@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
+'''
+Usage:
+    chat <uuid> ( -o | --orig )
+    chat (-h | --help | -v | --version)
+
+Options:
+    -o, --orig     Originate brand new convo
+    -h, --help     Show this screen and exit.
+    -v, --version  Show this screen and exit.
+    --baud=<n>   Baudrate [default: 9600]
+'''
 from gevent import monkey as _;_.patch_all()
-import os, sys, time, json, websocket, gevent
+import os, sys, time, json, websocket, gevent, docopt
 from gevent.fileobject import FileObject
 
 #from util import load_history_from_yml
@@ -97,6 +108,58 @@ def main():
     gevent.spawn(ws_loop)
     return fe_loop()
 
+from db_sync import *
+'''
+from db_ll_sync import *
+
+def check_valid_uuid(uuid):
+    conn = psycopg.connect(DSN)
+    cursor = conn.cursor()
+    password = os.getenv('USER_PASSWORD','(*^&%#$%#%)')
+    
+    try:        
+        cursor.execute("SELECT md5(%s)=digest FROM users"
+                       " WHERE users.id=%s LIMIT 1",
+                       (password, uuid))
+        
+        if row:= cursor.fetchone():
+            
+            if row[-1]:
+                print("PASSWORD MATCH, USER IS GOOD!")
+                return uuid
+            
+            else:
+                print("PASSWORD MISMATCH")
+                raise SystemExit(6)
+            
+        else:
+            print("user not found!", uuid)
+            raise SystemExit(5)
+
+    except psycopg.errors.InvalidTextRepresentation:
+        print("WTF DUDE ARE YOU HIGH DID YOU THINK THIS WAS A VALID UUID??", uuid)
+        raise SystemExit(4)
+
+    pass
+'''
 
 if __name__=='__main__':
-    main()
+    args = docopt.docopt(__doc__, version="1.0.1")
+    print("ARGS", args)
+
+    uuid = args['<uuid>']
+    print("USER", uuid)
+
+    if args['--orig']:
+        print("YES, ORIG")
+        check_valid_uuid(uuid)
+    
+        
+        
+    else:
+        print("NOO, BAD ARGS", args)
+        raise SystemExit(1)
+    
+    print("skip main...")
+    
+    #main()

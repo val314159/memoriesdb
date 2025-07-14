@@ -259,6 +259,12 @@ async def create_memory_edge(
         raise
 
 
+# Misc funcs
+
+async def validate_user_id(uuid):
+    
+    pass
+
 # Additional utility functions can be added below as needed
 
 

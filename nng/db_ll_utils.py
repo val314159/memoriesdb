@@ -25,7 +25,7 @@ from logging_setup import get_logger
 logger = get_logger(__name__)
 
 # Build Database Connection String
-logger.info("Database connection configured with DSN: " +
+logger.info("Database connection configured with DSN: async " +
             DSN.replace(PG_PASS, "***") if PG_PASS else DSN)
 
 # Connection pool
@@ -42,7 +42,7 @@ def get_current_user_id() -> Optional[str]:
     """
     return _CURRENT_USER_ID
 
-def set_current_user_id(user_id: str = None):
+def set_current_user_id(user_id: str):
     """Set the current user ID in memory
     
     This sets the user ID in memory, and all subsequent database connections
