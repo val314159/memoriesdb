@@ -59,3 +59,22 @@ def load_history_from_yml(filename='chat.yml'):
             
                 yield m                
                 break
+
+def load_history_from_yml_raw(filename='chat2.yml'):
+    
+    with open(filename) as f:
+
+        for n,m in enumerate(yaml.safe_load_all(f)):
+        
+            assert(type(m)==dict)
+
+            assert( len(m)>=1 )
+        
+            for k in m:
+            
+                m['role'] = k
+                m['content'] = m.pop(k)
+                m['kind'] = 'history'
+            
+                yield m                
+                break

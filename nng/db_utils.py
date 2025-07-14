@@ -55,7 +55,7 @@ async def get_edge_by_id(edge_id: str) -> Optional[Dict]:
         ret.update(ret.pop('_metadata'))
         pass
     return ret
-
+ 
 async def create_memory(
     content: str, 
     user_id: Optional[str] = None,
@@ -79,15 +79,18 @@ async def create_memory(
     Raises:
         ValueError: If content is empty or no user context is available
     """
+    print("ASDFASDF")
     if not content:
         raise ValueError("Content cannot be empty")
         
+    print("ASDFASDF")
     # Get user from context if not provided
     if not user_id:
         user_id = get_current_user_id()
         if not user_id:
             raise ValueError("No user context available. Call set_current_user_id() first or provide user_id.")
     
+    print("ASDFASDF")
     query = """
     INSERT INTO memories (
         content, 
@@ -258,12 +261,6 @@ async def create_memory_edge(
         logger.error(f"Error creating memory: {e}")
         raise
 
-
-# Misc funcs
-
-async def validate_user_id(uuid):
-    
-    pass
 
 # Additional utility functions can be added below as needed
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 '''
 Usage:
+    chat <uuid>
     chat <uuid> ( -o | --orig )
     chat (-h | --help | -v | --version)
 
@@ -13,6 +14,13 @@ Options:
 from gevent import monkey as _;_.patch_all()
 import os, sys, time, json, websocket, gevent, docopt
 from gevent.fileobject import FileObject
+
+import asyncio
+import asyncio_gevent
+
+# make gevent/asyncio work together
+asyncio.set_event_loop_policy(asyncio_gevent.EventLoopPolicy())
+
 
 # This makes stdin's FD non-blocking and replaces sys.stdin with
 # a wrapper that is integrated into the event loop
@@ -88,6 +96,10 @@ def main():
         pass
     
     def fe_loop():
+
+        content = ''
+        pub(ws, CH_IN, content, kind='session', xyz=200)
+
         while content := readline():
             role = 'user'
             if content.startswith('system: '):
@@ -114,6 +126,7 @@ if __name__=='__main__':
     print("USER", uuid)
 
     if args['--orig']:
+
         print("YES, ORIG")
         check_valid_uuid(uuid)
 
@@ -123,15 +136,21 @@ if __name__=='__main__':
             if forked_from:
                 raise Exception("DONT KNOW HOW "
                                 "TO DO THIS YET")
+
             print("ok let's make a new session")
             
-
         originate_session()
-        
+
+        print("skip main...")
+    
+        # main()
+
     else:
-        print("NOO, BAD ARGS", args)
-        raise SystemExit(1)
-    
-    print("skip main...")
-    
-    #main()
+        uuid = args['<uuid>']
+        check_valid_uuid(uuid)
+
+        main()
+        #print("NOO, BAD ARGS", args)
+        #raise SystemExit(1)
+
+    # main()

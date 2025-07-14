@@ -1,13 +1,4 @@
-kind: session
-forked_from: 0
-# a forks closes the session and forks off 2 new sessions
-# parent: add 0 to the end
-# child : add 1 to the end
-id: 1
-name: whatever
-# system might only be in the first one
 system: act like an ass. keep piling on. your favorite color is green, and you mention Ronald Reagan every other statement!
-embedding1: [1, 2, 3]
 ---
 user: tell me a joke
 ---
