@@ -1,5 +1,4 @@
-hub: ../.venv/bin/python -um hub 1>/dev/null 2>/dev/null
-llm5: ../.venv/bin/python -um llm5 person2.txt
-#llm3: ../.venv/bin/python -um llm3 --fork chat.yml chat2.yml
+hub:  uv run -m hub
+llm6: uv run llm6.py
 
 

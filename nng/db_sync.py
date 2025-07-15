@@ -1,9 +1,28 @@
-from db_ll_utils import *
 from db_ll_sync import *
 
 from logging_setup import get_logger
 
+
 logger = get_logger(__name__)
+
+
+def get_memories_by_uuid(created_by: str, suffix='') -> List:
+    query = """
+    SELECT id, kind, content, content_hash, content_embedding, _metadata,
+           created_by, updated_by
+    FROM memories
+    WHERE created_by = %s and _deleted_at IS NULL
+    """
+    if suffix: query += ' ' + suffix
+    conn = psycopg.connect(DSN, row_factory=dict_row)
+    cursor = conn.cursor()
+    cursor.execute(query, (created_by,))
+    #print("QQ", query, ((created_by,)))
+    for row in cursor:
+        #print("ROWWWWWWW RAW", row)
+        yield row
+        pass
+    return
 
 
 def get_memory_by_id(memory_id: str) -> Optional[Dict]:
@@ -21,7 +40,6 @@ def get_memory_by_id(memory_id: str) -> Optional[Dict]:
     FROM memories
     WHERE id = %s
     """
-    from psycopg.rows import dict_row
     
     conn = psycopg.connect(DSN, row_factory=dict_row)
     cursor = conn.cursor()
@@ -245,5 +263,46 @@ def check_valid_uuid(uuid):
         print("WTF DUDE ARE YOU HIGH DID YOU THINK THIS WAS A VALID UUID??", uuid)
         raise SystemExit(4)
 
-    pass
 
+def load_simplified_convo(convo_id):
+    return simplify_convo( load_convo(convo_id) )
+
+
+def simplify_convo(convo):
+    """
+    turns a complex array of dicts
+    into the minumum we need to send to the context window
+    """
+    for msg in convo:
+        kind = msg.get('kind')
+        if kind == 'history':
+            #print("MESSAGE")
+            #print("H", msg)
+            yield dict(role=msg['role'],
+                       content=msg['content'])
+        elif kind == 'session':
+            #print("SESSION")
+            pass
+        else:
+            NO_WAY
+
+
+def load_convo(suid):
+    session = get_memory_by_id(suid)
+    yield session
+
+    for targets_edge in get_edges_by_target( session['id'] ):
+        source_id = targets_edge['source_id']
+        vertex = get_memory_by_id(source_id)
+        yield vertex
+
+
+def store_convo(history, title):
+    uuid = get_current_user_id()
+    suid = create_memory(title, uuid, kind='session')
+    for h in history:
+        h['user_id'] = uuid
+        muid = create_memory(**h)
+        euid = create_memory_edge(muid, suid, 'belongs_to')
+        pass
+    return suid

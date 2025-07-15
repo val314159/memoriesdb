@@ -14,7 +14,6 @@ import numpy.typing as npt
 import psycopg
 import psycopg_pool
 from psycopg.rows import dict_row
-#from pgvector.psycopg import register_vector
 from pgvector.psycopg import register_vector_async
 import time
 from typing import Any, Dict, List, Optional, Union, cast

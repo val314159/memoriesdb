@@ -107,7 +107,8 @@ def main():
                 role = 'system'
                 content = content[len('system: '):]
                 pass
-            pub(ws, CH_IN, content, role=role, session=session_id)
+            pub(ws, CH_IN, content, role=role,
+                uuid=uuid, session=session_id)
             pass
         return print("EOF")
 
@@ -148,8 +149,8 @@ if __name__=='__main__':
 
     else:
         uuid = args['<uuid>']
+        session_id = args['<session_id>']
         check_valid_uuid(uuid)
-
         main()
         #print("NOO, BAD ARGS", args)
         #raise SystemExit(1)
