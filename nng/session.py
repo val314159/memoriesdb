@@ -73,10 +73,10 @@ class EphemeralSessionProxy:
         tool_calls = [ dict( function = dict( name=name,
                                               arguments=arguments)) ]
         role='assistant'
-        _id = _.append_hist(None, role=role, tool_calls=tool_calls)
+        _id = _.append_hist(None, role=role, tool_calls=tool_calls, xx=1)
 
         role='tool'
-        _id = _.append_hist(str(output), role=role, name=name)
+        _id = _.append_hist(str(output), role=role, tool_name=name, yy=2)
         return _id
 
     def chat_llm(_) -> ollama.ChatResponse:

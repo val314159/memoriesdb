@@ -281,6 +281,8 @@ def simplify_convo(convo):
         if kind == 'history':
             #print("MESSAGE")
             #print("H", msg)
+            data = dict(role=msg['role'],
+                        content=msg['content'])
             if done is None:
                 yield dict(role=msg['role'],
                            content=msg['content'])
