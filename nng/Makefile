@@ -8,9 +8,10 @@ PG_PORT = 54321
 PG_CONTAINER_NAME = pgvector
 PG_DATA_DIR = ./data/postgres
 
+U=uv run --env-file=.env 
+
 # Docker run options - use env file for most vars, override port
-V = --rm --env-file=.env \
-	-p${PG_PORT}:5432 \
+V = --rm --env-file=.env -p${PG_PORT}:5432 \
 	--name pgvector pgvector/pgvector:0.8.0-${PG}
 
 # Get list of SQL migration files in order
@@ -27,15 +28,21 @@ setup-db: pgvector-wait
 		docker exec -i ${PG_CONTAINER_NAME} psql $P <$$sql_file || exit 1; \
 	done
 	@echo "Database schema and initial data setup complete"
+	@echo "Loading test schema..."
+	$U load_convo.py chat2.yml
+	@echo "Loading complete"
 
 honcho::
 	uv run honcho start
 
 chat::
-	uv run --env-file .env -m chat
+	$U chat6.py TEST LAST
+
+old_chat::
+	$U -m chat
 
 ipython:
-	uv run --env-file .env ipython
+	$U .env ipython
 
 # Database connection
 db-connect:
@@ -67,7 +74,7 @@ pgvector-wait:
 	@echo "Waiting for PostgreSQL to be ready..."
 	@until docker logs pgvector 2>&1 | grep -q "database system is ready to accept connections"; do \
 		echo -n "."; \
-		sleep 1; \
+		sleep 0.1; \
 	done
 	@echo "\nPostgreSQL is ready!"
-	sleep 1
+	sleep 0.1

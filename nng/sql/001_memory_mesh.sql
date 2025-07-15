@@ -35,9 +35,9 @@ CREATE TABLE memories (
     _metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_by UUID REFERENCES users(id),
     updated_by UUID REFERENCES users(id),
-    _deleted_at TIMESTAMPTZ,
+    _deleted_at TIMESTAMPTZ
     -- CONSTRAINT unique_content_hash UNIQUE(content_hash),
-    CONSTRAINT content_not_empty CHECK (content IS NULL OR content != '')
+    -- CONSTRAINT content_not_empty CHECK (content IS NULL OR content != '')
 );
 
 -- ===========================

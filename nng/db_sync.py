@@ -124,7 +124,9 @@ def create_memory(
     conn = psycopg.connect(DSN)
     cursor = conn.cursor()
     if not content:
-        raise ValueError("Content cannot be empty")
+        content = ''
+        #raise ValueError("Content cannot be empty")
+        pass
     if type(metadata) == dict:
         metadata.update(kw)
     else:
@@ -306,3 +308,12 @@ def store_convo(history, title):
         euid = create_memory_edge(muid, suid, 'belongs_to')
         pass
     return suid
+
+def get_user_sessions(uuid):
+    return get_memories_by_uuid(uuid, " AND kind='session'")
+
+def get_last_session(uuid):
+    suffix = " AND kind='session' ORDER BY id DESC LIMIT 1"
+    for row in get_memories_by_uuid(uuid, suffix):
+        print(f"Loading Session {row['id']}: {row['content']}")
+        return row

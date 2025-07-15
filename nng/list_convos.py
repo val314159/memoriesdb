@@ -3,16 +3,8 @@ import os, sys, time, json
 
 import db_utils
 
-#import asyncio
-#import asyncio_gevent
+from db_sync import get_user_sessions
 
-# make gevent/asyncio work together
-#asyncio.set_event_loop_policy(asyncio_gevent.EventLoopPolicy())
-
-from util import load_history_from_yml, load_history_from_txt
-
-#from db_ll_sync import *
-from db_sync import *
 
 def main():
     print("LIST CONVOS")
@@ -20,7 +12,7 @@ def main():
     
     uuid = sys.argv[1]
 
-    for row in get_memories_by_uuid(uuid, " AND kind='session'"):
+    for row in get_user_sessions(uuid):
         print(f"Session {row['id']}: {row['content']}")
         pass
     pass

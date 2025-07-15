@@ -2,25 +2,21 @@
 '''
 Usage:
     chat <uuid> <session_id>
-    chat <uuid>
-    chat <uuid> ( -o | --orig )
     chat (-h | --help | -v | --version)
 
 Options:
-    -o, --orig     Originate brand new convo
     -h, --help     Show this screen and exit.
     -v, --version  Show this screen and exit.
-    --baud=<n>   Baudrate [default: 9600]
+    --baud=<n>     Baudrate [default: 9600]
+    <session_id>   session_id or LAST
+    <uuid>          a user_id or TEST
 '''
 from gevent import monkey as _;_.patch_all()
 import os, sys, time, json, websocket, gevent, docopt
 from gevent.fileobject import FileObject
+from uuid import UUID
 
-import asyncio
-import asyncio_gevent
-
-# make gevent/asyncio work together
-asyncio.set_event_loop_policy(asyncio_gevent.EventLoopPolicy())
+from db_sync import check_valid_uuid, get_last_session, get_current_user_id
 
 
 # This makes stdin's FD non-blocking and replaces sys.stdin with
@@ -97,10 +93,6 @@ def main():
         pass
     
     def fe_loop():
-
-        #content = ''
-        #pub(ws, CH_IN, content, kind='session', xyz=200)
-
         while content := readline():
             role = 'user'
             if content.startswith('system: '):
@@ -110,49 +102,47 @@ def main():
             pub(ws, CH_IN, content, role=role,
                 uuid=uuid, session=session_id)
             pass
-        return print("EOF")
+        print("EOF")
+        return
 
     gevent.spawn(ws_loop)
     return fe_loop()
 
 
-from db_ll_sync import *
-
-from db_sync import check_valid_uuid
+def _get_user_id():
+    uuid = args['<uuid>']
+    try:
+        assert( uuid=='TEST' or UUID(uuid) )
+    except:
+        print("Bad user_id (should be a valid uuid or TEST):", session_id)
+        raise SystemExit(1)
+    if uuid == 'TEST':
+        uuid = get_current_user_id()
+        pass
+    print("UUID?", uuid)
+    check_valid_uuid(uuid)
+    print("UUID!", uuid)
+    return uuid
+    
+def _get_session_id():
+    session_id = args['<session_id>']
+    try:
+        assert( session_id=='LAST' or UUID(session_id) )
+    except:
+        print("Bad session_id (should be a valid uuid, or LAST):", session_id)
+        raise SystemExit(1)
+    if session_id == 'LAST':        
+        row = get_last_session(uuid)
+        print("ROW:", row)
+        session_id = str(row['id'])
+    else:
+        # validate session id here?
+        pass
+    print("SESS", session_id)
+    return session_id
 
 if __name__=='__main__':
     args = docopt.docopt(__doc__, version="1.0.1")
-    print("ARGS", args)
-
-    uuid = args['<uuid>']
-    print("USER", uuid)
-
-    if args['--orig']:
-
-        print("YES, ORIG")
-        check_valid_uuid(uuid)
-
-        def originate_session(forked_from=None):
-            print("originate_session():", 
-                  (forked_from,))
-            if forked_from:
-                raise Exception("DONT KNOW HOW "
-                                "TO DO THIS YET")
-
-            print("ok let's make a new session")
-            
-        originate_session()
-
-        print("skip main...")
-    
-        # main()
-
-    else:
-        uuid = args['<uuid>']
-        session_id = args['<session_id>']
-        check_valid_uuid(uuid)
-        main()
-        #print("NOO, BAD ARGS", args)
-        #raise SystemExit(1)
-
-    # main()
+    uuid = _get_user_id()
+    session_id = _get_session_id()
+    main()

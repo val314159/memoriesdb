@@ -19,6 +19,8 @@ def main():
     else:
         print("BAD FORMAT")
         raise SystemExit(1)
+
+    print('='*80)
     
     new_title = "NewSession" + ts.replace(' ','T')
     convo_id = db.store_convo(history, new_title)    
@@ -28,4 +30,4 @@ def main():
     pass
 
 if __name__=='__main__': main()
-        
+
