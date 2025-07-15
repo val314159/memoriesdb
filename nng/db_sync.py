@@ -277,11 +277,17 @@ def simplify_convo(convo):
     """
     for msg in convo:
         kind = msg.get('kind')
+        done = msg.get('done', None)
         if kind == 'history':
             #print("MESSAGE")
             #print("H", msg)
-            yield dict(role=msg['role'],
-                       content=msg['content'])
+            if done is None:
+                yield dict(role=msg['role'],
+                           content=msg['content'])
+            else:
+                yield dict(role=msg['role'],
+                           content=msg['content'],
+                           done=done)
         elif kind == 'session':
             #print("SESSION")
             pass

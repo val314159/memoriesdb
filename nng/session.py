@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional, Union, cast
 import os, time, json, websocket, ollama
 import db_sync as db
 from logging_setup import get_logger
+import traceback
 
 
 logger = get_logger(__name__)
@@ -33,11 +34,11 @@ WS_BASE = "ws://localhost:5002/ws"
 
 class EphemeralSessionProxy:
 
-    def __init__(_, uuid, session_id,
+    def __init__(_, uuid, session_id, funcs,
                  ws, model, tools, out_channel):
-        _.uuid                      = uuid
+        _.uuid, _.session_id, _.funcs = uuid, session_id, funcs
         _.ws, _.model, _.tools      = ws, model, tools
-        _.session_id, _.out_channel = session_id, out_channel
+        _.out_channel = out_channel
         pass
 
     def materialize_history(_):
@@ -54,6 +55,7 @@ class EphemeralSessionProxy:
         pub(_.ws, _.out_channel, content, role=role, done=done)
 
     def append_hist(_, content, role='user', **kw):
+        print("QQQQ KW", kw)
         muid = db.create_memory(session_id=_.session_id,
                                 user_id=_.uuid,
                                 content=content,
@@ -142,14 +144,20 @@ class EphemeralSessionProxy:
                     pass 
                 continue
 
-            import funcs2 as funcs
-            function_to_call = getattr(funcs, name, '')
+            function_to_call = getattr(_.funcs, name, '')
 
             if not function_to_call:
                 print('Function', name, 'not found')
                 raise exit(1)
 
-            output = function_to_call(**arguments)
+            try:
+                output = function_to_call(**arguments)
+            except:
+                output = traceback.format_exc()
+                print("\\ERROR", '*'*40)
+                print(output)
+                print( "/ERROR", '*'*40)
+                pass
 
             _.append_tool(name, arguments, output)
 

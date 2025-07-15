@@ -53,19 +53,14 @@ class Convo:
         pass
 
     def got_pub(_, params):
-        print("GOT PUB YYYYYY", params)
-        #uuid = params.get('uuid')
-        #session_id = params['session']
-        session = EphemeralSessionProxy(params['uuid'],
-                                        params['session'],
-                                        _.ws, _.model, _.tools,
-                                        OUT_CHANNEL)
-        session.chat_round(params['content'])
+        return EphemeralSessionProxy(params['uuid'], params['session'], funcs,
+                                     _.ws, _.model, _.tools, OUT_CHANNEL
+                                     ).chat_round(params['content'])
 
     def once(_):
-        #print("Waiting on socket...")
+        print("Waiting on socket...")
         msg = recv(_.ws)
-        #print("Got", (msg,), "!")
+        print("Got", (msg,), "!")
         method = msg.get('method')
         params = msg.get('params',{})
         if method=='initialize':
