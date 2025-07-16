@@ -71,6 +71,7 @@ def add_two_numbers(a: int, b: int) -> int:
   Returns:
     int: The sum of the two numbers added together
   """
+  qwqwqwq
   # The cast is necessary as returned tool call
   # arguments don't always conform exactly to schema
   # E.g. this would prevent "what is 30 + 12"

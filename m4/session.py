@@ -82,7 +82,7 @@ class EphemeralSessionProxy:
         _id = _.append_hist(content=str(output), role=role, tool_name=name, yy=2)
         return _id
 
-    def chat_llm(_) -> ollama.ChatResponse:
+    def chat_llm(_, use_tools=True) -> ollama.ChatResponse:
         retries = -1
         messages = _.materialize_history()
         for m in messages:
@@ -93,9 +93,18 @@ class EphemeralSessionProxy:
             if retries > 3:
                 print("TOO MANY RETRIES")
                 raise SystemExit(1)
-            return ollama.chat(model=_.model, messages=messages,
-                               tools=_.tools, stream=True, format='json')
-        pass
+            tools = _.tools if use_tools else []
+            if use_tools:
+                ret = ollama.chat(model=_.model, messages=messages,
+                                   tools=  tools, stream=True
+                                   , format='json')
+            else:
+                ret = ollama.chat(model=_.model, messages=messages,
+                                  format='json')
+                pass
+            if type(ret).__name__ != 'generator':
+                return [ ret ]
+            return ret
 
     def chat_round(_, content, role='user'):
         """
@@ -164,7 +173,9 @@ class EphemeralSessionProxy:
 
             _.append_tool(name, arguments, output)
 
-            for msg in _.chat_llm():
+            use_tools = False
+            #use_tools = True
+            for msg in _.chat_llm(use_tools=use_tools):
 
                 message, done = msg.message, msg.done
 
@@ -176,11 +187,11 @@ class EphemeralSessionProxy:
                     _.pub_content(message.content, message.role, done=done, yy=3)
 
                 elif not message.content and     message.tool_calls:
+
+                    print("2deep?")
+                    print(message)
+                    
                     raise Exception('too deep')
 
-                else:
-                    if not done:
-                        raise Exception('wtf')
-
-                    #_.append_hist(message.content, role, done=done, z20=45)
-                    #_.pub_content(message.content, role, done=done, yy=2)
+                elif not done:
+                    raise Exception('wtf')
