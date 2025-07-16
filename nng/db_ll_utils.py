@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, Union, cast
 from config import PG_USER, PG_PASS, PG_HOST, PG_PORT, PG_DB, DEBUG, DSN
 from logging_setup import get_logger
 
+
 logger = get_logger(__name__)
 
 # Build Database Connection String
