@@ -11,16 +11,12 @@ U=uv run --env-file=.env
 V = --rm --env-file=.env -p${PG_PORT}:5432 \
 	--name pgvector pgvector/pgvector:0.8.0-${PG}
 
-# Get list of SQL migration files in order
-SQL_FILES = $(wildcard sql/*_*.sql)
-
 P=postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB
 D="DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
 all: pgvector-restart
 
-reset-db: pgvector-wait
-	sleep 2
+reset-db:
 	bash restart_db.sh
 
 honcho::
@@ -35,7 +31,10 @@ ipython:
 db-connect:
 	docker exec -it ${PG_CONTAINER_NAME} bash -c 'psql $P'
 
-pgvector-start: _pgvector-start reset-db
+pgvector-start: _pgvector-start pgvector-wait-1 reset-db
+
+pgvector-wait-1: pgvector-wait
+	sleep 1
 
 _pgvector-start:
 	docker run -d ${V}
