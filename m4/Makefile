@@ -1,8 +1,5 @@
 
-all:: pgvector-restart
-	@echo hello
-
-# Pstgres Variables
+# Postgres Variables
 PG = pg15
 PG_PORT = 54321
 PG_CONTAINER_NAME = pgvector
@@ -17,28 +14,14 @@ V = --rm --env-file=.env -p${PG_PORT}:5432 \
 # Get list of SQL migration files in order
 SQL_FILES = $(wildcard sql/*_*.sql)
 
-P2="postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:54321/$$POSTGRES_DB"
-P="postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB"
+P=postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB
 D="DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-# Setup database schema
-setup-db: pgvector-wait
-	echo QQQ
-#x	sh restart_db.sh
+all: pgvector-restart
 
-oldddd:
-	@echo "Setting up database schema..."
-
-
-	@echo "Setting up database schema..."
-	@for sql_file in $(sort $(SQL_FILES)); do \
-		echo "Applying $$sql_file..."; \
-		docker exec -i ${PG_CONTAINER_NAME} psql $P <$$sql_file || exit 1; \
-	done
-	@echo "Database schema and initial data setup complete"
-	@echo "Loading test schema..."
-	$U load_convo.py chat2.yml
-	@echo "Loading complete"
+reset-db: pgvector-wait
+	sleep 2
+	bash restart_db.sh
 
 honcho::
 	uv run honcho start
@@ -46,36 +29,12 @@ honcho::
 chat::
 	$U chat6.py TEST LAST
 
-old_chat::
-	$U -m chat
-
 ipython:
 	$U .env ipython
 
-# Database connection
 db-connect:
-	set -a ; . ./.env ; bash -c "psql postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:$(PG_PORT)/$$POSTGRES_DB"
+	docker exec -it ${PG_CONTAINER_NAME} bash -c 'psql $P'
 
-# Reset database schema (drop and recreate)
-reset-db: pgvector-wait
-	@echo "Resetting database schema..."
-	@echo "Resetting database schema..."
-	@echo "Resetting database schema..."
-	@echo "Resetting database schema..."
-	pwd
-	ls -la .env
-	bash -c "set -a;source .env; docker exec -it pgvector psql 'postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}'"
-#	docker exec -it ${PG_CONTAINER_NAME} bash -c "psql postgresql://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@localhost:5432/$${POSTGRES_DB}"
-
-
-qqw::
-	docker exec --env-file=.env -it ${PG_CONTAINER_NAME} psql
-	qq
-	docker exec --env-file=.env -it ${PG_CONTAINER_NAME} psql $P -c $D
-	@echo "Schema dropped, recreating..."
-	bash -c "set -a ; . .env ; make setup-db"
-
-# PostgreSQL with pgvector
 pgvector-start: _pgvector-start reset-db
 
 _pgvector-start:
@@ -97,4 +56,4 @@ pgvector-wait:
 		sleep 0.1; \
 	done
 	@echo "\nPostgreSQL is ready!"
-	sleep 0.1
+
