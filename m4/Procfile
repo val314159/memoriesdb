@@ -1,4 +1,5 @@
-hub:  uv run -m hub
-llm6: uv run -m llm6
+# hub:  .venv/bin/python -um hub
+# llm6: .venv/bin/python -um llm6
 
-
+hub:  python3 -um hub
+llm6: python3 -um llm6

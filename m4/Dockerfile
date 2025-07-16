@@ -5,6 +5,7 @@ WORKDIR /app
 
 # Copy requirements if needed
 COPY requirements.txt . 
+RUN pip install -U pip
 RUN pip install -r requirements.txt
 
 # Create log directory
@@ -14,6 +15,6 @@ RUN mkdir -p /app/logs
 COPY . .
 
 # Run with Honcho
-RUN pip install honcho
+#RUN pip install honcho
 
 CMD ["honcho", "start"]

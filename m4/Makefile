@@ -36,7 +36,7 @@ db-connect:
 pgvector-start: _pgvector-start pgvector-wait-1 reset-db
 
 pgvector-wait-1: pgvector-wait
-	sleep 1
+	sleep 2
 
 _pgvector-start:
 	docker run -d ${V}

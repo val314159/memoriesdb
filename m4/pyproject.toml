@@ -15,8 +15,7 @@ dependencies = [
     "numpy>=2.3.1",
     "ollama>=0.5.1",
     "pgvector>=0.4.1",
-    "psycopg>=3.2.9",
-    "psycopg-pool>=3.2.6",
+    "psycopg[binary,pool]>=3.2.9",
     "pyaml>=25.7.0",
     "websocket-client>=1.8.0",
 ]
