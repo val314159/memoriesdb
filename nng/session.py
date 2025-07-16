@@ -75,7 +75,6 @@ class EphemeralSessionProxy:
         role='assistant'
         print("XXXX", dict(role=role, tool_calls=tool_calls, xx=1))
         _id = _.append_hist('', role=role, tool_calls=tool_calls, xx=1)
-        
 
         role='tool'
         print("YYYY",dict(content=str(output), role=role, tool_name=name, yy=2))
@@ -172,7 +171,7 @@ class EphemeralSessionProxy:
                     raise exit(1)
 
                 elif     message.content and not message.tool_calls:
-                    _.append_hist(message.content, message.role, done=done)
+                    _.append_hist(message.content, message.role, done=done, z10=30)
                     _.pub_content(message.content, message.role, done=done)
 
                 elif not message.content and     message.tool_calls:
@@ -182,5 +181,5 @@ class EphemeralSessionProxy:
                     if not done:
                         raise Exception('wtf')
 
-                    _.append_hist(message.content, role, done=done)
+                    _.append_hist(message.content, role, done=done, z20=45)
                     _.pub_content(message.content, role, done=done)
