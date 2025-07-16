@@ -1,0 +1,25 @@
+[project]
+name = "m4"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "jmward", email = "jmward@penguin" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "bottle-dev>=0.13.2",
+    "gevent-websocket>=0.10.1",
+    "numpy>=2.3.1",
+    "pgvector>=0.4.1",
+    "psycopg>=3.2.9",
+    "psycopg-pool>=3.2.6",
+    "pyaml>=25.7.0",
+]
+
+[project.scripts]
+m4 = "m4:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

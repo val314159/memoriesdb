@@ -1,0 +1,4 @@
+hub:  uv run -m hub
+llm6: uv run -m llm6
+
+
