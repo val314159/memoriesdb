@@ -120,7 +120,7 @@ def create_memory(
     content_embedding: Optional[npt.ArrayLike] = None,
     **kw
 ) -> str: # uuid
-    #print("SYNC VERSION", metadata, kw)
+    print("SYNC VERSION", metadata, kw)
     conn = psycopg.connect(DSN)
     cursor = conn.cursor()
     if not content:
@@ -132,6 +132,7 @@ def create_memory(
     else:
         metadata = kw
         pass
+    print("SYNC VERSIO2", metadata)
     query = """
     INSERT INTO memories (
         content, 
@@ -277,19 +278,19 @@ def simplify_convo(convo):
     """
     for msg in convo:
         kind = msg.get('kind')
-        done = msg.get('done', None)
         if kind == 'history':
             #print("MESSAGE")
             #print("H", msg)
             data = dict(role=msg['role'],
                         content=msg['content'])
-            if done is None:
-                yield dict(role=msg['role'],
-                           content=msg['content'])
-            else:
-                yield dict(role=msg['role'],
-                           content=msg['content'],
-                           done=done)
+            done = msg.get('done', None)
+            if done is not None:
+                data['done'] = done
+            if tool_name:= msg.get('tool_name'):
+                data['tool_name'] = tool_name
+            if tool_calls:= msg.get('tool_calls'):
+                data['tool_calls'] = tool_calls
+            yield data
         elif kind == 'session':
             #print("SESSION")
             pass
