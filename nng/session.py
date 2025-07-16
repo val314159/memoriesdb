@@ -51,8 +51,8 @@ class EphemeralSessionProxy:
             pass
         return ret
 
-    def pub_content(_, content, role, done):
-        pub(_.ws, _.out_channel, content, role=role, done=done)
+    def pub_content(_, content, role, **kw):
+        pub(_.ws, _.out_channel, content, role=role, **kw)
 
     def append_hist(_, content, role='user', **kw):
         print("QQQQ KW", kw)
@@ -122,8 +122,8 @@ class EphemeralSessionProxy:
                 raise exit(5)
 
             if message.content is not None and not message.tool_calls:
-                _.append_hist(message.content, message.role, done=done)
-                _.pub_content(message.content, message.role, done=done)
+                _.append_hist(message.content, message.role, done=done, qq=11)
+                _.pub_content(message.content, message.role, done=done, qq=11)
                 continue
 
             assert( len(message.tool_calls) == 1 )
@@ -172,7 +172,7 @@ class EphemeralSessionProxy:
 
                 elif     message.content and not message.tool_calls:
                     _.append_hist(message.content, message.role, done=done, z10=30)
-                    _.pub_content(message.content, message.role, done=done)
+                    _.pub_content(message.content, message.role, done=done, yy=3)
 
                 elif not message.content and     message.tool_calls:
                     raise Exception('too deep')
@@ -181,5 +181,5 @@ class EphemeralSessionProxy:
                     if not done:
                         raise Exception('wtf')
 
-                    _.append_hist(message.content, role, done=done, z20=45)
-                    _.pub_content(message.content, role, done=done)
+                    #_.append_hist(message.content, role, done=done, z20=45)
+                    #_.pub_content(message.content, role, done=done, yy=2)
