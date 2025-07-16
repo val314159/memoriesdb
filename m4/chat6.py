@@ -36,7 +36,8 @@ def send(ws, msg):
 def mesg(method, **params):
     return dict(method=method, params=params)
 
-def pub(ws, channel, content='', **kw):
+def pub(ws, channel, content='', **kw): 
+    ws.send(channel)
     return send(ws, mesg('pub',
                          channel = channel,
                          content = content, **kw))

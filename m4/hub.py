@@ -110,17 +110,11 @@ class Application(Bottle):
                  channels = channels)
         
             print("Waiting...")
-            while raw:= ws.receive():
+            while channel:= ws.receive():
+                print("CH", (channel,), "!")
+                raw = ws.receive()
                 print("Got", (raw,), "!")
-                data = json.loads(raw)
-                method = data.get('method')
-                params = data.get('params',{})
-                if method=='pub':
-                    _.pub_raw(ws, params['channel'], raw)
-                else:
-                    print("BAD PACKET:", data)
-                    pass
-                
+                _.pub_raw(ws, channel, raw)
                 time.sleep(0.2)
                 print("Waiting...")
                 pass
