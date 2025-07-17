@@ -1,6 +1,4 @@
-import { ref, onUnmounted } from 'vue';
-
-const str = JSON.stringify;
+import { ref, onUnmounted, computed } from 'vue';
 
 export function useWebSocket(url) {
   const isConnected = ref(false);
@@ -13,25 +11,53 @@ export function useWebSocket(url) {
     // Default handler for unhandled message kinds
     _default(message) {
       console.log('Unhandled message kind:', message.kind, message);
-      messages.value.push(message);
-    },
-    
-    // Example handler - can be overridden
-    initialize(message) {
-	console.log('Initialize message received:', message);
-	messages.value.push(message);
-    },
-    
-    // Example handler - can be overridden
-    chat_message(message) {
-      console.log('Chat message received:', message);
-      messages.value.push(message);
+      addMessage({
+        ...message,
+        timestamp: message.timestamp || new Date().toISOString(),
+      });
     },
     
     // System messages
     system(message) {
       console.log('System message:', message);
-      messages.value.push(message);
+      addMessage({
+        ...message,
+        kind: 'system',
+        timestamp: message.timestamp || new Date().toISOString(),
+      });
+    },
+    
+    // User messages (from any user)
+    userMessage(message) {
+      console.log('User message received:', message);
+      addMessage({
+        ...message,
+        kind: 'userMessage',
+        timestamp: message.timestamp || new Date().toISOString(),
+        reactions: message.reactions || []
+      });
+    },
+    
+    // Initialize handshake
+    initialize(message) {
+      console.log('Initialize message received:', message);
+      addMessage({
+        ...message,
+        kind: 'system',
+        timestamp: message.timestamp || new Date().toISOString(),
+        priority: 'high'
+      });
+    },
+    
+    // Error messages
+    error(message) {
+      console.error('Error message:', message);
+      addMessage({
+        ...message,
+        kind: 'error',
+        timestamp: message.timestamp || new Date().toISOString(),
+        priority: 'high'
+      });
     }
   };
 
@@ -82,6 +108,13 @@ export function useWebSocket(url) {
     }
   };
 
+  const addMessage = (message) => {
+    // Ensure we don't add duplicate messages
+    if (!messages.value.some(m => m.id === message.id || (m.timestamp === message.timestamp && m.content === message.content))) {
+      messages.value.push(message);
+    }
+  };
+
   const send = (data) => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       console.error('WebSocket is not connected');
@@ -89,16 +122,53 @@ export function useWebSocket(url) {
     }
     
     try {
-      const message = typeof data === 'string' ? data : JSON.stringify({
-        ...data,
-        timestamp: data.timestamp || new Date().toISOString()
-      });
-      socket.send(message);
+      const message = {
+        ...(typeof data === 'string' ? { content: data } : data),
+        timestamp: data?.timestamp || new Date().toISOString(),
+        id: data?.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      };
+      
+      // Set default values for user messages
+      if (message.kind === 'userMessage' || !message.kind) {
+        message.username = message.username || 'Anonymous';
+        message.kind = 'userMessage';
+      }
+      
+      socket.send(JSON.stringify(message));
+      
+      // For user messages, add to our local state immediately for instant feedback
+      if (message.kind === 'userMessage') {
+        addMessage({
+          ...message,
+          isOwn: true,
+          status: 'sending'
+        });
+      }
+      
       return true;
     } catch (error) {
       console.error('Error sending message:', error);
       lastError.value = error;
       return false;
+    }
+  };
+  
+  // Add reaction to a message
+  const addReaction = (messageId, reaction) => {
+    const message = messages.value.find(m => m.id === messageId);
+    if (message) {
+      message.reactions = message.reactions || [];
+      if (!message.reactions.includes(reaction)) {
+        message.reactions = [...message.reactions, reaction];
+        
+        // Send reaction to server
+        send({
+          kind: 'reaction',
+          messageId,
+          reaction,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
   };
 
@@ -108,6 +178,38 @@ export function useWebSocket(url) {
     // Return cleanup function
     return () => delete handlers[kind];
   };
+
+  // Group messages by date
+  const groupedMessages = computed(() => {
+    const groups = {};
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    
+    messages.value.forEach(message => {
+      const date = new Date(message.timestamp);
+      let dateStr;
+      
+      if (date.toDateString() === today) {
+        dateStr = 'Today';
+      } else if (date.toDateString() === yesterday) {
+        dateStr = 'Yesterday';
+      } else {
+        dateStr = date.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      }
+      
+      if (!groups[dateStr]) {
+        groups[dateStr] = [];
+      }
+      
+      groups[dateStr].push(message);
+    });
+    
+    return groups;
+  });
 
   // Clean up on unmount
   onUnmounted(() => {
@@ -120,9 +222,17 @@ export function useWebSocket(url) {
     isConnected,
     lastError,
     messages,
-    send,
+    groupedMessages,
     connect,
-    on, // Add the ability to register handlers
-    handlers // Expose handlers for direct manipulation if needed
+    disconnect: () => {
+      if (socket) {
+        socket.close();
+        socket = null;
+      }
+      isConnected.value = false;
+    },
+    send,
+    on,
+    handlers
   };
 }

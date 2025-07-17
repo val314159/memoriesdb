@@ -1,25 +1,34 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useWebSocket } from './composables/useWebSocket';
+import { ref, onMounted } from 'vue'
+import { useWebSocket } from './composables/useWebSocket'
 
-const messageText = ref('');
-const ws = useWebSocket(import.meta.env.VITE_WS_BASE+import.meta.env.VITE_WS_PATH);
+const messageText = ref('')
+const ws = useWebSocket(import.meta.env.VITE_WS_BASE+import.meta.env.VITE_WS_PATH)
 
-// Auto-connect when component mounts
-onMounted(() => {
-  ws.connect();
-});
+onMounted(_=>ws.connect()) // Auto-connect when component mounts
+
+const str = JSON.stringify
 
 const sendMessage = () => {
-  if (messageText.value.trim()) {
-    ws.send({
-      kind: 'user_message',
-      content: messageText.value,
-      timestamp: new Date().toISOString()
-    });
-    messageText.value = '';
-  }
-};
+    console.log("A1")
+    if (messageText.value.trim()) {
+	console.log("A2", messageText.value)
+	const role = 'user'
+	const channel = 'mem-out'
+	const data = {
+	    kind: 'user_message',
+	    role: role,
+	    channel: channel,
+	    content: messageText.value,
+	    timestamp: new Date().toISOString()
+	}
+	console.log("A5", str(data))
+	ws.send(channel)
+	ws.send(data)
+	messageText.value = ''
+    }
+    console.log("A9")
+}
 </script>
 
 <template>
