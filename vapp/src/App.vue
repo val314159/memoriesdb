@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { useWebSocket } from './composables/useWebSocket';
 
 const messageText = ref('');
-const ws = useWebSocket(`${import.meta.env.VITE_WS_BASE}${import.meta.env.VITE_WS_PATH}`);
+const ws = useWebSocket(import.meta.env.VITE_WS_BASE+import.meta.env.VITE_WS_PATH);
 
 // Auto-connect when component mounts
 onMounted(() => {

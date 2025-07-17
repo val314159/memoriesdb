@@ -1,65 +1,6 @@
 
-# Postgres Variables
-PG = pg15
-PG_PORT = 54321
-PG_CONTAINER_NAME = pgvector
-PG_DATA_DIR = ./data/postgres
-
-U=uv run --env-file=.env 
-
-# Docker run options - use env file for most vars, override port
-V = --rm --env-file=.env -p${PG_PORT}:5432 \
-	--name pgvector pgvector/pgvector:0.8.0-${PG}
-
-P=postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB
-D="DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-
-qqq::
-	@echo Fill This In
-
-all:: pgvector-restart honcho
-
-dev:: reset-db honcho
-
-reset-db:
-	bash restart_db.sh
-
-honcho::
-	uv run honcho start
-
-chat::
-	$U chat6.py TEST LAST
-
-ipython:
-	$U .env ipython
-
-db-connect:
-	docker exec -it ${PG_CONTAINER_NAME} bash -c 'psql $P'
-
-pgvector-start: _pgvector-start pgvector-wait-1 reset-db
-
-pgvector-wait-1: pgvector-wait
-	sleep 2
-
-_pgvector-start:
-	docker run -d ${V}
-	@echo "PostgreSQL with pgvector started, waiting for it to be ready..."
-	make pgvector-wait
-	@echo "PostgreSQL with pgvector is ready on port ${PG_PORT}"
-
-pgvector-stop:
-	docker rm -f pgvector || true
-	@echo "PostgreSQL container stopped and removed"
-
-pgvector-restart: pgvector-stop pgvector-start
-
-pgvector-wait:
-	@echo "Waiting for PostgreSQL to be ready..."
-	@until docker logs pgvector 2>&1 | grep -q "database system is ready to accept connections"; do \
-		echo -n "."; \
-		sleep 0.1; \
-	done
-	@echo "\nPostgreSQL is ready!"
+dev::
+	npx vite
 
 clean::
 	@find .	-name \*~ -o -name .\*~ | xargs rm -fr
