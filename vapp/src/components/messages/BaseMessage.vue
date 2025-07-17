@@ -1,11 +1,20 @@
 <template>
   <div 
-    :class="['message', `message-${kind}`, customClass]"
+    :class="['message', `message-${kind}`, customClass, { 'selected': isSelected }]"
     :style="messageStyle"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
+    @click="toggleSelect"
   >
     <div class="message-inner" :class="{ 'message-hover': isHovered }">
+      <div class="message-checkbox" @click.stop>
+        <input 
+          type="checkbox" 
+          :checked="isSelected"
+          @change="toggleSelect"
+          class="checkbox checkbox-xs"
+        />
+      </div>
       <div v-if="showTimestamp && message.timestamp" class="timestamp">
         <span class="time-icon">⏱️</span>
         <span class="time-text">{{ formatTimestamp(message.timestamp) }}</span>
@@ -31,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps({
   message: {
@@ -52,9 +61,24 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['reply', 'react']);
+const emit = defineEmits(['reply', 'react', 'select', 'deselect', 'delete']);
 
 const isHovered = ref(false);
+const isSelected = ref(false);
+
+const toggleSelect = () => {
+  isSelected.value = !isSelected.value;
+  if (isSelected.value) {
+    emit('select', props.message);
+  } else {
+    emit('deselect', props.message);
+  }
+};
+
+// Watch for external selection changes
+watch(() => props.message.selected, (newVal) => {
+  isSelected.value = newVal;
+});
 
 const formatTimestamp = (timestamp) => {
   return new Date(timestamp).toLocaleTimeString([], { 
@@ -76,23 +100,44 @@ const messageStyle = computed(() => {
 
 <style scoped>
 .message {
-  --glow-color: rgba(0, 150, 255, 0.1);
-  --border-color: rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  margin: 0.5rem 0;
-  border-radius: 0.5rem;
-  overflow: hidden;
   position: relative;
+  transition: all 0.2s ease;
+  margin: 0.5rem 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid transparent;
+}
+
+.message.selected {
+  border-left-color: #3b82f6;
+  background-color: #f8fafc;
+}
+
+.message-checkbox {
+  padding-top: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.message:hover .message-checkbox,
+.message.selected .message-checkbox {
+  opacity: 1;
 }
 
 .message-inner {
+  flex: 1;
   padding: 0.75rem 1rem;
-  border-left: 4px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.5rem;
+  background: var(--message-bg, white);
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+  position: relative;
 }
 
-.message-hover {
+.message-inner.message-hover {
   transform: translateX(4px);
   background: rgba(255, 255, 255, 0.05);
   box-shadow: 0 2px 8px -1px var(--glow-color);

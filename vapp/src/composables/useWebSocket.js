@@ -218,6 +218,16 @@ export function useWebSocket(url) {
     }
   });
 
+  // Function to add a message directly (useful for local state updates)
+  const addMessageExported = (message) => {
+    messages.value = [...messages.value, {
+      ...message,
+      id: message.id || `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: message.timestamp || new Date().toISOString(),
+      status: message.status || 'delivered'
+    }];
+  };
+
   return {
     isConnected,
     lastError,
@@ -232,6 +242,7 @@ export function useWebSocket(url) {
       isConnected.value = false;
     },
     send,
+    addMessage: addMessageExported,
     on,
     handlers
   };

@@ -1,5 +1,11 @@
 <template>
   <div class="messages-container">
+    <div v-if="selectedMessages.length > 0" class="selection-actions">
+      <span class="selected-count">{{ selectedMessages.length }} selected</span>
+      <button class="btn btn-error btn-sm" @click="deleteSelected">
+        <span class="icon">🗑️</span> Delete Selected
+      </button>
+    </div>
     <div v-for="(messageGroup, date) in groupedMessages" :key="date" class="message-group">
       <div class="date-divider">
         <span class="date-text">{{ date }}</span>
@@ -22,6 +28,9 @@
           }"
           @reply="handleReply"
           @react="handleReaction"
+          @select="selectMessage"
+          @deselect="deselectMessage"
+          @delete="handleDelete"
         />
       </TransitionGroup>
     </div>
@@ -39,7 +48,38 @@
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import { SystemMessage, UserMessage } from './messages';
+import { SystemMessage, UserMessage, AssistantMessage } from './messages';
+
+const selectedMessages = ref([]);
+
+const selectMessage = (message) => {
+  if (!selectedMessages.value.some(m => m.id === message.id)) {
+    selectedMessages.value.push(message);
+  }
+};
+
+const deselectMessage = (message) => {
+  selectedMessages.value = selectedMessages.value.filter(m => m.id !== message.id);
+};
+
+const handleDelete = (message) => {
+  // Emit delete event to parent
+  emit('delete', message);
+  
+  // Remove from selected if it was selected
+  deselectMessage(message);
+};
+
+const deleteSelected = () => {
+  // Create a copy of the array before clearing it
+  const toDelete = [...selectedMessages.value];
+  selectedMessages.value = [];
+  
+  // Emit delete for each selected message
+  toDelete.forEach(message => {
+    emit('delete', message);
+  });
+};
 
 const props = defineProps({
   messages: {
@@ -96,6 +136,8 @@ const getMessageComponent = (message) => {
       return SystemMessage;
     case 'userMessage':
       return UserMessage;
+    case 'assistant':
+      return AssistantMessage;
     default:
       return 'div';
   }
@@ -131,13 +173,29 @@ onUnmounted(() => {
 
 <style scoped>
 .messages-container {
-  flex: 1;
+  height: 100%;
   overflow-y: auto;
   padding: 1rem;
+  position: relative;
+}
+
+.selection-actions {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 0.5rem 1rem;
+  margin: -1rem -1rem 1rem -1rem;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  scroll-behavior: smooth;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.selected-count {
+  font-weight: 500;
+  color: #3b82f6;
 }
 
 .message-group {
