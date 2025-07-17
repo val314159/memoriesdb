@@ -14,9 +14,6 @@ V = --rm --env-file=.env -p${PG_PORT}:5432 \
 P=postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB
 D="DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-qqq::
-	@echo Fill This In
-
 all:: pgvector-restart honcho
 
 dev:: reset-db honcho
