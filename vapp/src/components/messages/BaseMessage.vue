@@ -99,15 +99,14 @@ const messageStyle = computed(() => {
 </script>
 
 <style scoped>
+/* Base message container - absolutely positioned to prevent layout shifts */
 .message {
   position: relative;
-  transition: all 0.2s ease;
+  min-height: 80px; /* Fixed minimum height */
   margin: 0.5rem 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding-left: 0.5rem;
+  padding-left: 2rem; /* Space for checkbox */
   border-left: 2px solid transparent;
+  transition: border-color 0.2s ease;
 }
 
 .message.selected {
@@ -115,34 +114,77 @@ const messageStyle = computed(() => {
   background-color: #f8fafc;
 }
 
+/* Checkbox - absolutely positioned */
 .message-checkbox {
-  padding-top: 0.75rem;
+  position: absolute;
+  left: 0.5rem;
+  top: 0.75rem;
+  width: 24px;
   opacity: 0;
   transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .message:hover .message-checkbox,
-.message.selected .message-checkbox {
+.message.selected .message-checkbox,
+.message:focus-within .message-checkbox {
   opacity: 1;
+  pointer-events: auto;
 }
 
+/* Message inner - takes full width */
 .message-inner {
-  flex: 1;
+  position: relative;
+  min-height: 60px;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   background: var(--message-bg, white);
   border: 1px solid var(--border-color, #e5e7eb);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+}
+
+/* Actions container - absolutely positioned at the bottom */
+.message-actions {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+  justify-content: flex-end;
+  background: linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%);
+  padding: 1rem 0 0.25rem;
+  margin: 0 -0.5rem -0.5rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+/* Show actions on hover */
+.message-inner:hover .message-actions,
+.message-inner:focus-within .message-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Hide actions if empty */
+.message-actions:empty {
+  display: none;
+}
+
+/* Ensure content has enough padding to avoid overlap with actions */
+.content {
+  padding-bottom: 1.5rem; /* Space for actions */
   position: relative;
+  z-index: 0;
 }
 
-.message-inner.message-hover {
-  transform: translateX(4px);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 2px 8px -1px var(--glow-color);
-}
-
+/* Timestamp styling */
 .timestamp {
   font-size: 0.7rem;
   opacity: 0.7;
@@ -150,15 +192,6 @@ const messageStyle = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-}
-
-.message-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
-  animation: slideUp 0.2s ease-out;
 }
 
 @keyframes slideUp {
