@@ -52,11 +52,10 @@ class EphemeralSessionProxy:
             pass
         return ret
 
-    def pub_content(_, content, role, **kw):
-        pub(_.ws, _.out_channel, content, role=role, **kw)
+    def pub_content(_, content, role, channel = None, **kw):
+        pub(_.ws, channel or _.out_channel, content, role=role, **kw)
 
     def append_hist(_, content, role='user', **kw):
-        print("QQQQ KW", kw)
         muid = db.create_memory(session_id=_.session_id,
                                 user_id=_.uuid,
                                 content=content,
@@ -66,20 +65,14 @@ class EphemeralSessionProxy:
         euid = db.create_memory_edge(muid, _.session_id, 'belongs_to')
         return muid
 
-    def append_user(_, content, role):
-        _id = _.append_hist(content, role=role)
+    def append_user(_, content, role, **kw):
+        _id = _.pub_content(content, role, **kw)
+        _id = _.append_hist(content, role, **kw)
         return _id
 
-    def append_tool(_, name, arguments, output):
-        tool_calls = [ dict( function = dict( name=name,
-                                              arguments=arguments)) ]
-        role='assistant'
-        print("XXXX", dict(role=role, tool_calls=tool_calls, xx=1))
-        _id = _.append_hist('', role=role, tool_calls=tool_calls, xx=1)
-
-        role='tool'
-        print("YYYY",dict(content=str(output), role=role, tool_name=name, yy=2))
-        _id = _.append_hist(content=str(output), role=role, tool_name=name, yy=2)
+    def append_tool(_, role, output='', **kw):
+        _id = _.pub_content(str(output), role, **kw)
+        _id = _.append_hist(str(output), role, **kw)
         return _id
 
     def chat_llm(_, use_tools=True) -> ollama.ChatResponse:
@@ -94,17 +87,19 @@ class EphemeralSessionProxy:
                 print("TOO MANY RETRIES")
                 raise SystemExit(1)
             tools = _.tools if use_tools else []
-            if use_tools:
-                ret = ollama.chat(model=_.model, messages=messages,
-                                   tools=  tools, stream=True
-                                   , format='json')
-            else:
-                ret = ollama.chat(model=_.model, messages=messages,
-                                  format='json')
-                pass
-            if type(ret).__name__ != 'generator':
-                return [ ret ]
-            return ret
+            #tools = []
+            #if use_tools:
+            ret = ollama.chat(model=_.model, messages=messages,
+                              tools=  tools, stream=True,
+                              format='json')
+            #else:
+            #    ret = ollama.chat(model=_.model, messages=messages,
+            #                      stream=True,
+            #                      format='json')
+            #    pass
+            if type(ret).__name__ == 'generator':
+                return ret
+            return [ ret ]
 
     def chat_round(_, content, role='user'):
         """
@@ -115,14 +110,12 @@ class EphemeralSessionProxy:
         """
 
         # save the message
-        _.append_user(content, role)
+        _.append_user(content, role, phase=0)
 
         # process results
         for msg in _.chat_llm():
             message, done = msg.message, msg.done
 
-            print(("MSG", done, message))
-            
             if not message:
                 print("NO MESSAGE")
                 raise exit(1)
@@ -132,8 +125,8 @@ class EphemeralSessionProxy:
                 raise exit(5)
 
             if message.content is not None and not message.tool_calls:
-                _.append_hist(message.content, message.role, done=done, qq=11)
-                _.pub_content(message.content, message.role, done=done, qq=11)
+                _.append_hist(message.content, message.role, done=done, phase=1)
+                _.pub_content(message.content, message.role, done=done, phase=1)
                 continue
 
             assert( len(message.tool_calls) == 1 )
@@ -144,16 +137,12 @@ class EphemeralSessionProxy:
                 (tool_call.name, tool_call.arguments, done)
 
             if name == 'respond_to_user':
-                # DON'T call a function here, we'll just handle it right here ourselves
+                # DON'T call a function here...
+                # we'll just handle it right here ourselves
                 role = 'assistant'
                 content = arguments['message']
-                if 1:
-                    _.append_hist(content, role, done=done)
-                    _.pub_content(content, role, done=done)        
-                else:
-                    _.append_tool(name, arguments, output)
-                    _.pub_content(content, role, done=done)
-                    pass 
+                _.append_hist(content, role, done=done, phase=1)
+                _.pub_content(content, role, done=done, phase=1)        
                 continue
 
             function_to_call = getattr(_.funcs, name, '')
@@ -162,6 +151,10 @@ class EphemeralSessionProxy:
                 print('Function', name, 'not found')
                 raise exit(1)
 
+            tool_calls = [ dict( function = dict( name=name,
+                                                  arguments=arguments)) ]
+            _.append_tool('tool', tool_calls=tool_calls, phase=3)
+            
             try:
                 output = function_to_call(**arguments)
             except:
@@ -171,10 +164,10 @@ class EphemeralSessionProxy:
                 print( "/ERROR", '*'*40)
                 pass
 
-            _.append_tool(name, arguments, output)
+            _.append_tool('assistant', output, tool_name=name, phase=4)
 
             use_tools = False
-            #use_tools = True
+            use_tools = True
             for msg in _.chat_llm(use_tools=use_tools):
 
                 message, done = msg.message, msg.done
@@ -183,8 +176,8 @@ class EphemeralSessionProxy:
                     raise exit(1)
 
                 elif     message.content and not message.tool_calls:
-                    _.append_hist(message.content, message.role, done=done, z10=30)
-                    _.pub_content(message.content, message.role, done=done, yy=3)
+                    _.append_hist(message.content, message.role, done=done, phase=5)
+                    _.pub_content(message.content, message.role, done=done, phase=5)
 
                 elif not message.content and     message.tool_calls:
 
@@ -195,3 +188,13 @@ class EphemeralSessionProxy:
 
                 elif not done:
                     raise Exception('wtf')
+                else:
+                    pass
+            else:
+                pass
+        else:
+            # final!
+            _.pub_content('', message.role, superdone=done, phase=9)
+            pass
+        pass # def chat_round(_, content, role='user'):
+    pass # class EphemeralSessionProxy:
