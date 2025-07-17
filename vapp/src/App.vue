@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useWebSocket } from './composables/useWebSocket';
 import MessagesContainer from './components/MessagesContainer.vue';
+import UserInput from './components/UserInput.vue';
 
 const messageText = ref('');
 const ws = useWebSocket(import.meta.env.VITE_WS_BASE + import.meta.env.VITE_WS_PATH);
@@ -97,23 +98,11 @@ const handleDeleteMessage = (message) => {
         />
         
         <!-- Message Input -->
-        <div class="bg-white rounded-lg shadow-md p-4">
-          <div class="flex gap-2">
-            <input 
-              v-model="messageText"
-              @keyup.enter="sendMessage"
-              class="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Type a message..."
-            />
-            <button 
-              @click="sendMessage"
-              class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              :disabled="!messageText.trim()"
-            >
-              Send
-            </button>
-          </div>
-        </div>
+        <UserInput 
+          v-model="messageText" 
+          @submit="sendMessage" 
+          class="sticky bottom-4"
+        />
       </div>
     </main>
   </div>

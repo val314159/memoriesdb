@@ -1,46 +1,142 @@
 <template>
-  <div 
-    :class="['message', `message-${kind}`, customClass, { 'selected': isSelected }]"
-    :style="messageStyle"
-    @mouseenter="isHovered = true"
-    @mouseleave="isHovered = false"
-    @click="toggleSelect"
+  <Card 
+    :class="[
+      'group relative overflow-hidden transition-all',
+      'hover:border-primary/30',
+      isSelected && 'ring-2 ring-primary/50',
+      customClass
+    ]"
   >
-    <div class="message-inner" :class="{ 'message-hover': isHovered }">
-      <div class="message-checkbox" @click.stop>
-        <input 
-          type="checkbox" 
-          :checked="isSelected"
-          @change="toggleSelect"
-          class="checkbox checkbox-xs"
-        />
-      </div>
-      <div v-if="showTimestamp && message.timestamp" class="timestamp">
-        <span class="time-icon">⏱️</span>
-        <span class="time-text">{{ formatTimestamp(message.timestamp) }}</span>
-      </div>
-      <div class="content">
-        <slot :message="message"></slot>
-      </div>
-      <transition name="fade">
-        <div v-if="isHovered" class="message-actions">
-          <button class="btn btn-ghost btn-xs" @click.stop="$emit('reply', message)">
-            <span class="icon">↩️</span> Reply
-          </button>
-          <button class="btn btn-ghost btn-xs" @click.stop="$emit('react', message, '👍')">
-            👍
-          </button>
-          <button class="btn btn-ghost btn-xs" @click.stop="$emit('react', message, '❤️')">
-            ❤️
-          </button>
+    <CardContent class="p-4">
+      <div class="flex gap-3" @click="toggleSelect">
+        <!-- Avatar -->
+        <Avatar class="h-8 w-8 mt-0.5 flex-shrink-0">
+          <AvatarImage :src="getAvatarUrl(kind)" />
+          <AvatarFallback class="text-xs">
+            {{ kind === 'user' ? 'U' : kind === 'assistant' ? 'A' : 'S' }}
+          </AvatarFallback>
+        </Avatar>
+
+        <!-- Message Content -->
+        <div class="flex-1 space-y-2 min-w-0">
+          <!-- Header with metadata -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">
+                {{ kind === 'user' ? 'You' : kind === 'assistant' ? 'Assistant' : 'System' }}
+              </span>
+              
+              <TooltipProvider v-if="showTimestamp && message.timestamp">
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <span class="text-xs text-muted-foreground">
+                      {{ formatTimestamp(message.timestamp) }}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div class="flex items-center gap-1">
+                      <IconClock class="h-3 w-3 mr-1" />
+                      {{ new Date(message.timestamp).toLocaleString() }}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <!-- Message actions dropdown -->
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  class="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  @click.stop
+                >
+                  <IconMoreHorizontal class="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" class="w-40">
+                <DropdownMenuItem @click.stop="$emit('reply', message)">
+                  <IconReply class="mr-2 h-4 w-4" />
+                  <span>Reply</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem @click.stop="$emit('react', message, '👍')">
+                  <span class="mr-2">👍</span>
+                  <span>Like</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem @click.stop="$emit('react', message, '❤️')">
+                  <span class="mr-2">❤️</span>
+                  <span>Love</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  class="text-destructive focus:text-destructive"
+                  @click.stop="$emit('delete', message)"
+                >
+                  <IconTrash class="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <!-- Message content -->
+          <div class="prose prose-sm max-w-none">
+            <slot :message="message"></slot>
+          </div>
+
+          <!-- Quick reactions -->
+          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button 
+              variant="outline" 
+              size="xs"
+              class="h-6 text-xs px-2"
+              @click.stop="$emit('react', message, '👍')"
+            >
+              <span class="mr-1">👍</span>
+              Like
+            </Button>
+            <Button 
+              variant="outline" 
+              size="xs"
+              class="h-6 text-xs px-2"
+              @click.stop="$emit('react', message, '❤️')"
+            >
+              <span class="mr-1">❤️</span>
+              Love
+            </Button>
+            <Button 
+              variant="outline" 
+              size="xs"
+              class="h-6 text-xs px-2"
+              @click.stop="$emit('reply', message)"
+            >
+              <IconReply class="h-3.5 w-3.5 mr-1" />
+              Reply
+            </Button>
+          </div>
         </div>
-      </transition>
-    </div>
-  </div>
+      </div>
+    </CardContent>
+  </Card>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { computed } from 'vue';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { 
+  Clock as IconClock,
+  User as IconUser,
+  Bot as IconBot,
+  Info as IconInfo,
+  Reply as IconReply,
+  MoreHorizontal as IconMoreHorizontal,
+  Trash as IconTrash,
+} from 'lucide-vue-next';
 
 const props = defineProps({
   message: {
@@ -49,7 +145,8 @@ const props = defineProps({
   },
   kind: {
     type: String,
-    default: 'default'
+    default: 'default',
+    validator: (value) => ['user', 'assistant', 'system', 'default'].includes(value)
   },
   showTimestamp: {
     type: Boolean,
@@ -58,186 +155,164 @@ const props = defineProps({
   customClass: {
     type: String,
     default: ''
+  },
+  isSelected: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['reply', 'react', 'select', 'deselect', 'delete']);
-
-const isHovered = ref(false);
-const isSelected = ref(false);
+const emit = defineEmits(['select', 'deselect', 'delete', 'reply', 'react']);
 
 const toggleSelect = () => {
-  isSelected.value = !isSelected.value;
-  if (isSelected.value) {
-    emit('select', props.message);
-  } else {
+  if (props.isSelected) {
     emit('deselect', props.message);
+  } else {
+    emit('select', props.message);
   }
 };
-
-// Watch for external selection changes
-watch(() => props.message.selected, (newVal) => {
-  isSelected.value = newVal;
-});
 
 const formatTimestamp = (timestamp) => {
-  return new Date(timestamp).toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const messageStyle = computed(() => {
-  if (props.message.priority === 'high') {
-    return {
-      '--glow-color': 'rgba(255, 82, 82, 0.3)',
-      '--border-color': 'rgba(255, 82, 82, 0.5)'
-    };
+const getBadgeVariant = (kind) => {
+  switch (kind) {
+    case 'user':
+      return 'default';
+    case 'assistant':
+      return 'secondary';
+    default:
+      return 'outline';
   }
-  return {};
-});
+};
+
+const getAvatarUrl = (kind) => {
+  // You can replace these with actual avatar URLs
+  const avatars = {
+    user: '/avatars/user.png',
+    assistant: '/avatars/assistant.png',
+    system: '/avatars/system.png'
+  };
+  return avatars[kind] || '';
+};
 </script>
 
 <style scoped>
-/* Base message container - absolutely positioned to prevent layout shifts */
-.message {
-  position: relative;
-  min-height: 80px; /* Fixed minimum height */
+/* Custom styles for message component */
+:deep(.prose) {
+  margin: 0;
+  line-height: 1.5;
+  color: inherit;
+}
+
+:deep(.prose p) {
+  margin: 0;
+  padding: 0;
+}
+
+:deep(.prose a) {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+:deep(.prose a:hover) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+:deep(.prose pre) {
+  background-color: hsl(var(--muted));
+  border-radius: var(--radius);
+  padding: 0.75rem;
   margin: 0.5rem 0;
-  padding-left: 2rem; /* Space for checkbox */
-  border-left: 2px solid transparent;
-  transition: border-color 0.2s ease;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
-.message.selected {
-  border-left-color: #3b82f6;
-  background-color: #f8fafc;
+:deep(.prose code) {
+  background-color: hsl(var(--muted));
+  border-radius: 0.25rem;
+  padding: 0.2em 0.4em;
+  font-size: 0.9em;
+  font-family: var(--font-mono);
 }
 
-/* Checkbox - absolutely positioned */
-.message-checkbox {
-  position: absolute;
-  left: 0.5rem;
-  top: 0.75rem;
-  width: 24px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-  z-index: 1;
+:deep(.prose pre code) {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.9em;
 }
 
-.message:hover .message-checkbox,
-.message.selected .message-checkbox,
-.message:focus-within .message-checkbox {
-  opacity: 1;
-  pointer-events: auto;
+:deep(.prose ul),
+:deep(.prose ol) {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
 }
 
-/* Message inner - takes full width */
-.message-inner {
-  position: relative;
-  min-height: 60px;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  background: var(--message-bg, white);
-  border: 1px solid var(--border-color, #e5e7eb);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+:deep(.prose li) {
+  margin: 0.25rem 0;
 }
 
-/* Actions container - absolutely positioned at the bottom */
-.message-actions {
-  position: absolute;
-  bottom: 0.5rem;
-  left: 1rem;
-  right: 1rem;
-  display: flex;
-  gap: 0.5rem;
-  opacity: 0;
-  transform: translateY(5px);
-  transition: all 0.2s ease;
-  pointer-events: none;
-  justify-content: flex-end;
-  background: linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%);
-  padding: 1rem 0 0.25rem;
-  margin: 0 -0.5rem -0.5rem;
-  border-radius: 0 0 0.5rem 0.5rem;
+:deep(.prose h1),
+:deep(.prose h2),
+:deep(.prose h3) {
+  margin: 1rem 0 0.5rem;
+  line-height: 1.3;
+  font-weight: 600;
 }
 
-/* Show actions on hover */
-.message-inner:hover .message-actions,
-.message-inner:focus-within .message-actions {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
+:deep(.prose h1) {
+  font-size: 1.5rem;
 }
 
-/* Hide actions if empty */
-.message-actions:empty {
-  display: none;
+:deep(.prose h2) {
+  font-size: 1.25rem;
 }
 
-/* Ensure content has enough padding to avoid overlap with actions */
-.content {
-  padding-bottom: 1.5rem; /* Space for actions */
-  position: relative;
-  z-index: 0;
+:deep(.prose h3) {
+  font-size: 1.1rem;
 }
 
-/* Timestamp styling */
-.timestamp {
-  font-size: 0.7rem;
-  opacity: 0.7;
-  margin-bottom: 0.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
+:deep(.prose blockquote) {
+  margin: 0.5rem 0;
+  padding: 0 0 0 1rem;
+  border-left: 3px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
+/* Animation for message appearance */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.message-system {
-  --border-color: rgba(100, 181, 246, 0.7);
+.animate-in {
+  animation: fadeIn 0.15s ease-out forwards;
 }
 
-.message-chat {
-  --border-color: rgba(76, 175, 80, 0.7);
+/* Custom scrollbar for code blocks */
+:deep(::-webkit-scrollbar) {
+  width: 6px;
+  height: 6px;
 }
 
-.message-error {
-  --border-color: rgba(244, 67, 54, 0.7);
-  --glow-color: rgba(244, 67, 54, 0.2);
+:deep(::-webkit-scrollbar-track) {
+  background: hsl(var(--muted));
+  border-radius: 3px;
 }
 
-@keyframes popIn {
-  0% { transform: scale(0.95); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+:deep(::-webkit-scrollbar-thumb) {
+  background: hsl(var(--border));
+  border-radius: 3px;
 }
 
-.message-enter-active {
-  animation: popIn 0.3s cubic-bezier(0.2, 0, 0.2, 1);
-}
-
-.btn-ghost {
-  transition: all 0.2s ease;
-  opacity: 0.7;
-}
-
-.btn-ghost:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-@media (max-width: 640px) {
-  .message-inner {
-    padding: 0.5rem;
-  }
-  
-  .message-actions {
-    gap: 0.25rem;
-  }
+:deep(::-webkit-scrollbar-thumb:hover) {
+  background: hsl(var(--border) / 0.8);
 }
 </style>

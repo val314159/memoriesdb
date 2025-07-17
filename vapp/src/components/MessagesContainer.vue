@@ -48,7 +48,13 @@
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import { SystemMessage, UserMessage, AssistantMessage } from './messages';
+import { 
+  SystemMessage, 
+  UserMessage, 
+  AssistantMessage, 
+  ToolCallMessage, 
+  ToolResultMessage 
+} from './messages';
 
 const selectedMessages = ref([]);
 
@@ -138,7 +144,13 @@ const getMessageComponent = (message) => {
       return UserMessage;
     case 'assistant':
       return AssistantMessage;
+    case 'tool-call':
+      return ToolCallMessage;
+    case 'tool-result':
+    case 'tool-error':
+      return ToolResultMessage;
     default:
+      console.warn('Unknown message kind:', message.kind);
       return 'div';
   }
 };
