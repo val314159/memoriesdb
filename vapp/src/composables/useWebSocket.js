@@ -1,5 +1,7 @@
 import { ref, onUnmounted } from 'vue';
 
+const str = JSON.stringify;
+
 export function useWebSocket(url) {
   const isConnected = ref(false);
   const lastError = ref(null);
@@ -12,6 +14,12 @@ export function useWebSocket(url) {
     _default(message) {
       console.log('Unhandled message kind:', message.kind, message);
       messages.value.push(message);
+    },
+    
+    // Example handler - can be overridden
+    initialize(message) {
+	console.log('Initialize message received:', message);
+	messages.value.push(message);
     },
     
     // Example handler - can be overridden
@@ -40,7 +48,7 @@ export function useWebSocket(url) {
       const handleMessage = (message) => {
         try {
           // Call the appropriate handler based on message kind
-          const handler = handlers[message.kind] || handlers._default;
+            const handler = handlers[message.kind] || handlers[message.method] || handlers._default;
           handler(message);
         } catch (error) {
           console.error('Error in message handler:', error);
@@ -51,10 +59,8 @@ export function useWebSocket(url) {
       socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          if (!message.kind) {
+          if (!message.kind)
             console.warn('Message missing kind:', message);
-            return;
-          }
           handleMessage(message);
         } catch (error) {
           console.error('Error parsing message:', error, event.data);
