@@ -61,6 +61,16 @@ def main():
         while content == '\n':
             print("user>", end=' ')
             content = stdin.readline()
+            if   content == 'q\n':
+                print(">> Bye!", flush=True)
+                raise SystemExit(0)
+            elif content == 'j\n':
+                content = "Tell me a joke."
+            elif content == 'a\n':
+                content = "12345 + 54321 = what?"
+            else:
+                pass
+        else:
             pass
         return content
 

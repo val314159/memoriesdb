@@ -120,7 +120,7 @@ def create_memory(
     content_embedding: Optional[npt.ArrayLike] = None,
     **kw
 ) -> str: # uuid
-    print("SYNC VERSION", metadata, kw)
+    #print("SYNC VERSION", metadata, kw)
     conn = psycopg.connect(DSN)
     cursor = conn.cursor()
     if not content:
@@ -132,7 +132,7 @@ def create_memory(
     else:
         metadata = kw
         pass
-    print("SYNC VERSIO2", metadata)
+    #print("SYNC VERSIO2", metadata)
     query = """
     INSERT INTO memories (
         content, 
@@ -224,7 +224,7 @@ def create_memory_edge(
     )
 
     try:
-        result = cursor.execute(query, params)
+        cursor.execute(query, params)
         #result = await query_fetchone(query, params)
         #print("R", (result,))
         result = cursor.fetchone()
@@ -279,8 +279,6 @@ def simplify_convo(convo):
     for msg in convo:
         kind = msg.get('kind')
         if kind == 'history':
-            #print("MESSAGE")
-            #print("H", msg)
             data = dict(role=msg['role'],
                         content=msg['content'])
             done = msg.get('done', None)
@@ -292,7 +290,6 @@ def simplify_convo(convo):
                 data['tool_calls'] = tool_calls
             yield data
         elif kind == 'session':
-            #print("SESSION")
             pass
         else:
             NO_WAY
@@ -313,6 +310,7 @@ def store_convo(history, title):
     suid = create_memory(title, uuid, kind='session')
     for h in history:
         h['user_id'] = uuid
+        h['active'] = True
         muid = create_memory(**h)
         euid = create_memory_edge(muid, suid, 'belongs_to')
         pass

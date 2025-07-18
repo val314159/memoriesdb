@@ -16,7 +16,10 @@ class SubAgentBase:
         _.ws = ws
         pass
 
-    def pub(_, params):
+    def  pub(_, params):
+        return _._pub(**params)
+
+    def _pub(_, **kw):
         raise Exception('NYI')
     
     def main(_):
