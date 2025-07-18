@@ -25,7 +25,7 @@ from logging_setup import get_logger
 logger = get_logger(__name__)
 
 # Build Database Connection String
-logger.info("Database connection configured with DSN: async " +
+logger.info("Database connection configured with DSN: " +
             DSN.replace(PG_PASS, "***") if PG_PASS else DSN)
 
 # Connection pool

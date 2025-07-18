@@ -11,6 +11,5 @@ logger = get_logger(__name__)
 from db_ll_utils import get_current_user_id
 
 # Build Database Connection String
-logger.info("Database connection configured with DSN:  sync " +
-            DSN.replace(PG_PASS, "***") if PG_PASS else DSN)
-
+#logger.info("Database connection configured with DSN:  sync " +
+#            DSN.replace(PG_PASS, "***") if PG_PASS else DSN)
