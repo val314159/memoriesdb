@@ -22,3 +22,11 @@ CHAT_MODEL = os.getenv("CHAT_MODEL", "llama3.1")  # Default chat/tool-calling mo
 
 # Logging
 LOG_FILE = os.getenv("LOG_FILE", "")  # Set to a filename to enable file logging
+
+
+# Ollama options
+
+STREAM = bool(os.getenv('STREAM', True))
+THINK =  bool(os.getenv('THINK',  True))
+TOOLS =  bool(os.getenv('TOOLS',  True))
+
