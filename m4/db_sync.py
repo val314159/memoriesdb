@@ -290,6 +290,8 @@ def simplify_convo(convo):
                 data['tool_name'] = tool_name
             if tool_calls:= msg.get('tool_calls'):
                 data['tool_calls'] = tool_calls
+            if thinking:= msg.get('thinking'):
+                data['thinking'] = thinking
             yield data
         elif kind == 'session':
             pass

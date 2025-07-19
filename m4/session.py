@@ -83,73 +83,84 @@ class EphemeralSessionProxy:
             pass
         pass
     
-    def filter_tool_calls(_, done, message, accumulator):
-        _tool_calls = []
+    def filter_tool_calls(_, done, message):
         for call in (message.tool_calls or []):
             print("TC", call)
             name, arguments = call.function.name, call.function.arguments
             if name == 'respond_to_user':
                 _.respond_to_user(done, message, arguments['message'], None)
                 continue                
-            funcall = dict( function=dict( name=name, arguments=arguments ) )
-            _tool_calls.append( funcall ) 
-            accumulator.append( funcall )
+            yield dict( function=dict( name=name, arguments=arguments ) )
             pass
-        return _tool_calls
+        pass
     
     def respond_to_user(_, done, message, content, tool_calls):
+
         if not done and not content and not tool_calls and not message.get('thinking'):
             print("SUPPRESS", (done, content, message.role), message.thinking, tool_calls)
             return
+        
         kw = dict(done=done)
+        
         if tool_calls is not None:        kw['tool_calls'] = tool_calls
         if thinking := message.thinking:  kw['thinking'] = thinking
         if                         done:  kw['autotool'] = bool(tool_calls)
+        
         _.append_hist(content=content, role=message.role, **kw)
         return    
 
     def chat_round(_, content=None, channel=None, role='user', auto_tool=True):
+
         if channel is not None:
             _.out_channel = channel
             pass
+
         if content is not None:
             _.seq = 999
-
-            images = []
             if 'IMAGE==>' in content:
                 content, image = content.strip().split('IMAGE==>', 1)
                 images = [ image ]
+            else:
+                images = []
                 pass
             _.append_hist(content=content, role=role, seq=_.seq, images=images)
             pass
-            
-            pass
+        
         while 1:
+
             all_tool_calls = []
             for msg in _.ollama_chat(stream=STREAM, think=THINK):
                 message, done = msg.message, msg.done
-                funcalls = _.filter_tool_calls(done, message, all_tool_calls)
+                funcalls = list( _.filter_tool_calls(done, message) )
                 _.respond_to_user(done, message, message.content, funcalls)
+
+                all_tool_calls.extend( funcalls )
                 pass
+            
             if not all_tool_calls:
                 print("NO MORE TOOLS, WE'RE DONE WITH THIS ROUND")
-                #_.append_hist(role='round', superdone=True)
-                #print("BYE!")            
                 return
+            
             for tc in all_tool_calls:
+                
                 try:
+                    
                     tool_name = tc['function']['name']
                     arguments = tc['function']['arguments']
                     print("TOOL CALL", (tool_name, arguments))
                     function_to_call = getattr(_.funcs, tool_name)
                     content = function_to_call(**arguments)
+                    
                 except:
+                    
                     content = traceback.format_exc()
                     print("\\ERROR", '*'*40)
                     print(content)
                     print( "/ERROR", '*'*40)
                     pass
+                
                 _.append_hist(role='tool', tool_name=tool_name, content=content)
+
                 pass
 
             if not auto_tool:
