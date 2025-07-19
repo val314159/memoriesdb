@@ -67,7 +67,11 @@ def main():
             elif content == 'j\n':
                 content = "Tell me a joke."
             elif content == 'a\n':
-                content = "12345 + 54321 = what?"
+                content = "12345 + 54321 = what?\n"
+            elif content == 'c\n':
+                content = "What is this?\nIMAGE==>./Cute_cat.jpg"
+            elif content == 'd\n':
+                content = "What is this?\nIMAGE==>./Cute_dog.jpg"
             else:
                 pass
         else:
@@ -105,13 +109,14 @@ def main():
     
     def fe_loop():
         while content := readline():
-            role = 'user'
+            kw = dict(role='user', uuid=uuid, session=session_id)
             if content.startswith('system: '):
-                role = 'system'
-                content = content[len('system: '):]
+                kw['role'], content = content.strip().split(': ', 1)
                 pass
-            pub(ws, CH_IN, content, role=role,
-                uuid=uuid, session=session_id)
+            #if 'IMAGE==>' in content:
+            #    content, kw['image'] = content.strip().split('IMAGE==>')
+            #    pass
+            pub(ws, CH_IN, content, **kw)
             pass
         print("EOF")
         return

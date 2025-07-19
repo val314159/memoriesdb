@@ -284,6 +284,8 @@ def simplify_convo(convo):
             done = msg.get('done', None)
             if done is not None:
                 data['done'] = done
+            if images:= msg.get('images'):
+                data['images'] = images
             if tool_name:= msg.get('tool_name'):
                 data['tool_name'] = tool_name
             if tool_calls:= msg.get('tool_calls'):

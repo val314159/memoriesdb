@@ -4,15 +4,12 @@ import db_sync as db
 from logging_setup import get_logger
 import traceback
 
-
 logger = get_logger(__name__)
-
 
 def generator_wrap(x):
     if type(x).__name__ == 'generator':
         return x
     return [ x ]
-
 
 def recv(ws):
     raw = ws.recv()
@@ -35,6 +32,7 @@ def pub(ws, channel, content='', **kw):
 
 STREAM = bool(os.getenv('STREAM', True))
 THINK =  bool(os.getenv('THINK',  True))
+TOOLS =  bool(os.getenv('TOOLS',  True))
 #THINK = os.getenv('THINK',False)
 
 NAME = os.getenv('NAME','llm')
@@ -42,13 +40,6 @@ IN_CHANNEL  = NAME+'-in'
 OUT_CHANNEL = NAME+'-out'
 WS_BASE = "ws://localhost:5002/ws"
 
-'''def append_tool1(_, name, arguments, **kw):
-        tool_calls = [ dict( function = dict( name=name,
-                                              arguments=arguments)) ]
-        _id = _.append_hist('', role='assistant', tool_calls=tool_calls, **kw)
-    def append_tool2(_, name, content, **kw):
-        _id = _.append_hist(content=str(content), role='tool', tool_name=name, **kw)
-'''
 
 class EphemeralSessionProxy:
     
@@ -80,8 +71,11 @@ class EphemeralSessionProxy:
         retries = 0
         while retries < max_retries:
             try:
-                ret = ollama.chat(messages=_.materialize_history(),
-                                  model=_.model, tools=_.tools, **kw)
+                if TOOLS:
+                    kw['tools'] = _.tools
+                    pass
+                messages = _.materialize_history()
+                ret = ollama.chat(messages=messages, model=_.model, **kw)
                 return generator_wrap(ret)
             except:
                 retries += 1
@@ -120,7 +114,15 @@ class EphemeralSessionProxy:
             pass
         if content is not None:
             _.seq = 999
-            _.append_hist(content=content, role=role, seq=_.seq)
+
+            images = []
+            if 'IMAGE==>' in content:
+                content, image = content.strip().split('IMAGE==>', 1)
+                images = [ image ]
+                pass
+            _.append_hist(content=content, role=role, seq=_.seq, images=images)
+            pass
+            
             pass
         while 1:
             all_tool_calls = []
@@ -156,168 +158,3 @@ class EphemeralSessionProxy:
             
             # do it again!
             print("SAVED ALL THE TOOL OUTPUT, PRIMED FOR ANOTHER LLM CHAT RUN (RECURSE)!")
-            #_.chat_round()
-
-
-"""
-            #pass
-            
-            continue
-            if not message:
-                print("NO MESSAGE")
-                raise exit(1)
-            if message.get('content') is None and not message.tool_calls:
-                print("THIS NO CONTENT AND NO TOOL CALLS (maybe an image?)")
-                raise exit(5)
-            if message.content is None:
-                print(done, message)
-                print(" **** MSG.CONTENT IS NONE ****")
-                content_is_none
-                raise
-            if message.content and message.tool_calls:
-                print(done, message)
-                print(" **** MSG.CONTENT AND MSG.TOOL_CALLS ARE BOTH NON-NONE ****")
-                content_and_tool_calls_are_non_none
-                raise
-            if message.content:
-                respond_to_user(message.content)
-                continue
-            if message.tool_calls:
-                _tool_calls = []
-                for call in message.tool_calls:
-                    tool_call = call.function
-                    name, arguments = tool_call.name, tool_call.arguments
-                    #if name == 'respond_to_user':
-                    #    respond_to_user(tc.arguments['message'])
-                    #    continue 
-                    _tool_call = dict( function = dict( name=name,
-                                                        arguments=arguments ) )
-                    _tool_calls.append( _tool_call )
-                    tool_calls.append( (name, arguments) )
-                    pass
-                else:
-                    pass
-                _.append_hist(message.content, role=message.role, tool_calls=_tool_calls)
-                _.pub_content(message.content, role=message.role, tool_calls=_tool_calls)
-            else:
-                pass
-            pass
-
-        for tool_name, arguments in tool_calls:
-            print("DEAL WITH THIS", (tool_name, arguments))
-            pass
-
-        return
-            
-'''
-        if 0:
-            phase = 20.1
-
-            if message.content is not None and not message.tool_calls:
-
-                kw = dict(phase=phase, done=done, active=True)
-                if thinking := message.thinking:
-                    kw['thinking'] = thinking
-                    pass
-                _.append_hist(message.content, message.role, **kw)
-                _.pub_content(message.content, message.role, **kw)
-                continue
-
-            phase = 21.1
-
-            assert( len(message.tool_calls) == 1 )
-
-            tool_call = message.tool_calls[0].function
-
-            name, arguments, done = \
-                (tool_call.name, tool_call.arguments, done)
-
-            if name == 'respond_to_user':
-                # DON'T call a function here, we'll just handle it right here ourselves
-                role = 'assistant'
-                content = arguments['message']
-
-                kw = dict(phase=phase, done=done, active=True)
-
-                _.append_hist(content, role, **kw)
-                _.pub_content(content, role, **kw)
-
-                continue
-
-            phase = 31.1
-        phase = 31.1
-
-            function_to_call = getattr(_.funcs, name, '')
-
-            if not function_to_call:
-                print('Function', name, 'not found')
-                raise exit(1)
-
-            _.append_hist(role='assistant', phase=phase, active=True,
-                          tool_calls = [ dict( function = dict( name=name,
-                                                                arguments=arguments)) ])
-
-            try:
-                output = function_to_call(**arguments)
-            except:
-                output = traceback.format_exc()
-                print("\\ERROR", '*'*40)
-                print(output)
-                print( "/ERROR", '*'*40)
-                pass
-
-            phase = 32.1
-                        
-            _.append_hist(role='tool', tool_name=name, content=str(output), phase=phase, active=True)
-
-            pass # end first chat loop
-
-        if 0:
-        
-            for tmsg in ollama.chat(model=_.model,
-                                    messages=_.materialize_history(),
-                                    tools=_.tools,
-                                    stream=True,
-                                    think=True,
-                                    #format='json',
-                                    ):
-
-                tdone, tmessage = tmsg.done, tmsg.message
-
-                if not tmessage:
-                    raise exit(1)
-
-                elif not tmessage.content and not tmessage.tool_calls and tmessage.get('thinking'):
-
-                    phase = 41
-                    
-                    kw = dict(phase=phase, done=tdone, role=tmessage.role)
-                    if thinking := tmessage.thinking:
-                        kw['thinking'] = thinking
-                        pass
-                    _.append_hist(tmessage.content, active=False, **kw)
-                    _.pub_content(tmessage.content, active=False, **kw)
-
-                elif     tmessage.content and not tmessage.tool_calls:
-
-                    phase = 42.1
-                    
-                    kw = dict(phase=phase, done=tdone, role=tmessage.role)
-                    if thinking := tmessage.thinking:
-                        kw['thinking'] = thinking
-                        pass
-                    _.append_hist(tmessage.content, active=True,  **kw)
-                    _.pub_content(tmessage.content, active=True,  **kw)
-
-                elif not tmessage.content and     tmessage.tool_calls:
-
-                    print("2deep?")
-                    print(tmessage)
-                    
-                    raise Exception('too deep')
-
-                else:
-                    
-                    print("ORPHAN", tmessage)
-'''
-"""
