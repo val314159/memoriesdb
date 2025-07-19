@@ -4,7 +4,7 @@ import os
 from subagent import SubAgentBase, OUT_CHANNEL
 import funcs2 as funcs
 
-from session import EphemeralSessionProxy as ESP
+from session import EphemeralSessionProxy as ESP, chat_round
 
 MODEL = os.getenv('MODEL', 'llama3.1')
 
@@ -14,7 +14,7 @@ class Convo(SubAgentBase):
         pass
     def _pub(_, content, uuid, session, **kw):
         sess = ESP(uuid, session, funcs, _.ws, _.model, _.tools)
-        sess.chat_round(content, OUT_CHANNEL)
+        chat_round(sess, content, OUT_CHANNEL)
         return
     pass
 
