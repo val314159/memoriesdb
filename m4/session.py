@@ -7,14 +7,13 @@ def pub(ws, channel, content='', **kw):
     return ws.send(json.dumps(dict(method='pub',
                                    params=dict(channel=channel,
                                                content=content, **kw))))
-def is_generator(x):
-    return type(x).__name__ == 'generator'
-def is_blank_message(message):
-    return not ( message.get( 'tool_calls' ) or
-                 message.get( 'content'    ) or
-                 message.get( 'images'     ) or
-                 message.get( 'done'       ) )
-def call_tool(tool_name, funcs=None, **kw):
+def   is_generator(x): return type(x).__name__ == 'generator'
+def wrap_generator(x): return x if is_generator(x) else [ x ]
+def is_blank_message(message): return not ( message.get( 'tool_calls' ) or
+                                            message.get( 'content'    ) or
+                                            message.get( 'images'     ) or
+                                            message.get( 'done'       ) )
+def call_tool(funcs, tool_name, **kw):
     print("TOOL CALL", (tool_name, kw))
     try:
         return getattr(funcs, tool_name)(**kw)
@@ -44,7 +43,7 @@ def materialize_history(_):
         print("===M", msg)
         pass
     return print("<---------")
-def append_hist(_, content='', role='user', kind='history', **kw):
+def append_hist(_, content='', role='user', kind='partial', **kw):
     _.seq += 1
     kw.update(dict(content=content, role=role, kind=kind, seq=_.seq))
     muid = db_sync.create_memory(session_id=_.session_id, user_id=_.uuid, **kw)
@@ -57,11 +56,11 @@ def ollama_chat(_, stream=STREAM, think=THINK, tools=TOOLS, max_retries=3, retri
     if tools: kw['tools'] = _.tools
     while retries < max_retries:
         try:
-            results = ollama.chat(**kw)
+            return wrap_generator( ollama.chat(**kw) )
         except:
             retries += 1
-            continue
-        return results if is_generator(results) else [ results ]
+            pass
+        pass
     pass
 def _respond_to_user(_, done, message, content, tool_calls, **kw):
     if tool_calls:                   kw['tool_calls'] = tool_calls
@@ -102,5 +101,5 @@ def chat_round(_, content='', channel='', role='user', auto_tool=True):
             return print("NO MORE TOOLS, WE'RE DONE WITH THIS ROUND")
         while tool_calls:
             fn = tool_calls.pop(0)['function']
-            content = call_tool(fn.name, fn.arguments, _.funcs)
-            append_hist(_, content=content, role='tool', tool_name=fn.name)
+            content = call_tool(_.funcs, fn['name'], **fn['arguments'])
+            append_hist(_, content=content, role='tool', tool_name=fn['name'])

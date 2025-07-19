@@ -278,7 +278,7 @@ def simplify_convo(convo):
     """
     for msg in convo:
         kind = msg.get('kind')
-        if kind == 'history':
+        if kind in ('history', 'partial'):
             data = dict(role=msg['role'],
                         content=msg['content'])
             done = msg.get('done', None)
