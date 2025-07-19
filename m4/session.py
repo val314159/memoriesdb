@@ -2,17 +2,11 @@ from typing import Any, Dict, List, Optional, Union, cast
 import os, time, json, websocket, ollama, traceback, db_sync, logging_setup
 from config import STREAM, THINK, TOOLS
 logger = logging_setup.get_logger(__name__)
-def recv(ws):
-    raw = ws.recv()
-    if not raw:        raise EOFError
-    return json.loads(raw)
-def send(ws, msg):    return ws.send( json.dumps(msg) )
-def mesg(method, **params):    return dict(method=method, params=params)
 def pub(ws, channel, content='', **kw):
     ws.send(channel)
-    return send(ws, mesg('pub',
-                         channel = channel,
-                         content = content, **kw))
+    return ws.send(json.dumps(dict(method='pub',
+                                   params=dict(channel=channel,
+                                               content=content, **kw))))
 def is_generator(x):
     return type(x).__name__ == 'generator'
 def is_blank_message(message):
@@ -23,15 +17,14 @@ def is_blank_message(message):
 def call_tool(tool_name, funcs=None, **kw):
     print("TOOL CALL", (tool_name, kw))
     try:
-        function_to_call = getattr(funcs, tool_name)
-        content = function_to_call(**kw)
+        return getattr(funcs, tool_name)(**kw)
     except:
         content = traceback.format_exc()
         print("\\ERROR", '*'*40)
         print(content)
         print( "/ERROR", '*'*40)
-        pass
-    return content
+        return content
+    pass
 class EphemeralSessionProxy:
     def __init__(_, uuid, session_id, funcs, ws, model, tools):
         _.uuid, _.session_id, _.funcs = uuid, session_id, funcs
@@ -58,19 +51,17 @@ def append_hist(_, content='', role='user', kind='history', **kw):
     euid = db_sync.create_memory_edge(muid, _.session_id, 'belongs_to')
     pub(_.ws, _.out_channel, **kw)
     return muid
-def ollama_chat(_, stream=STREAM, think=THINK, tools=TOOLS, **kw):
-    retries, max_retries = 0, 3
-    if tools: kw['tools'] = _.tools
+def ollama_chat(_, stream=STREAM, think=THINK, tools=TOOLS, max_retries=3, retries=0):
     messages = list( materialize_history(_) )
+    kw = dict(messages=messages, model=_.model, stream=stream, think=think)
+    if tools: kw['tools'] = _.tools
     while retries < max_retries:
         try:
-            results = ollama.chat(messages=messages, model=_.model,
-                                  stream=stream, think=think, **kw)
-            return results if is_generator(results) else [ results ]
+            results = ollama.chat(**kw)
         except:
             retries += 1
-            pass
-        pass
+            continue
+        return results if is_generator(results) else [ results ]
     pass
 def _respond_to_user(_, done, message, content, tool_calls, **kw):
     if tool_calls:                   kw['tool_calls'] = tool_calls
@@ -88,12 +79,12 @@ def _filter_tool_calls(_, done, message):
         pass
     pass
 def _append_user(_, content, role, **kw):
-    _.seq, images = 999, []
+    _.seq = 999
     if 'IMAGE==>' in content:
         content, image = content.strip().split('IMAGE==>', 1)
-        images.append( image )
+        kw['images'] = [ image ]
         pass
-    return append_hist(_, content=content, role=role, seq=_.seq, fn='append_user', **kw)  
+    return append_hist(_, content=content, role=role, seq=_.seq, fn='append_user', **kw)
 def chat_round(_, content='', channel='', role='user', auto_tool=True):
     if channel: _.out_channel = channel
     if content: _append_user(_, content=content, role=role)
@@ -102,7 +93,8 @@ def chat_round(_, content='', channel='', role='user', auto_tool=True):
         for msg in llm_messages:
             funcalls = list( _filter_tool_calls(_, msg.done, msg.message) )
             tool_calls.extend( funcalls )
-            _respond_to_user(_, msg.done, msg.message, msg.message.content, funcalls, scan=1)
+            _respond_to_user(_, msg.done, msg.message,
+                             msg.message.content, funcalls, scan=1)
             pass
         if not auto_tool:
             return print("NO AUTO_TOOL...WE'RE DONE WITH THIS ROUND")
