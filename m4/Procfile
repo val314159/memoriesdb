@@ -1,5 +1,2 @@
-# hub:  .venv/bin/python -um hub
-# llm6: .venv/bin/python -um llm6
-
 hub:  python3 -um hub  2>&1 | tee hub.log
 llm6: python3 -um llm6 2>&1 | tee llm.log
