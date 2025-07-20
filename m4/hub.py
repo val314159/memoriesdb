@@ -13,6 +13,8 @@ from geventwebsocket import WebSocketServer, WebSocketError
 from geventwebsocket.websocket import (
     MSG_CLOSED, MSG_ALREADY_CLOSED, MSG_SOCKET_DEAD)
 
+print("std test", file=sys.stderr, flush=True)
+
 # This makes stdin's FD non-blocking and replaces sys.stdin with
 # a wrapper that is integrated into the event loop
 stdin = FileObject(sys.stdin)
@@ -104,6 +106,7 @@ class Application(Bottle):
         channels = request.query.getall('c')
 
         try:
+            print("New connection...")
             _.subscribe(ws, channels)
             call(ws, 'initialize',
                  wsid = wsid,
@@ -111,9 +114,9 @@ class Application(Bottle):
         
             print("Waiting...")
             while channel:= ws.receive():
-                #print("CH", (channel,), "!")
+                print("CHN", (channel,), "!")
                 raw = ws.receive()
-                #print("Got", (raw,), "!")
+                print("Got", (raw,), "!")
                 _.pub_raw(ws, channel, raw)
                 print("Waiting...")
                 pass

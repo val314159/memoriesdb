@@ -18,13 +18,19 @@ class WsApp {
 	    print("WE ARE INITIALIZEING DO WE HAVE A SESSION ID=?")
 	this._ondata(data)
     }
-    pub(content, role, channel){
+    pub(content,  role,  channel){
+	print("pub1")
+	const params = { channel:      channel || CH_OUT,
+			 role   :      role    || 'user',
+			 content:      content,
+			 uuid   : this.uuid,
+			 session: this.session }
+	print("pub2")
+	this.ws.send(          channel             )
+	print("pub3")
 	this.ws.send( dumps( { method: 'pub',
-			       params: { channel:      channel || CH_OUT,
-					 role   :      role    || 'user',
-					 content:      content,
-					 uuid   : this.uuid,
-					 session: this.session } } ) )
+			       params: params  } ) )
+	print("pub4")
     }
     resetInactivityTimeout(){
 	if (this.inactivityTimeout)
