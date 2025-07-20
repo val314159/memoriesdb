@@ -111,15 +111,13 @@ class Application(Bottle):
         
             print("Waiting...")
             while channel:= ws.receive():
-                print("CH", (channel,), "!")
+                #print("CH", (channel,), "!")
                 raw = ws.receive()
-                print("Got", (raw,), "!")
+                #print("Got", (raw,), "!")
                 _.pub_raw(ws, channel, raw)
-                time.sleep(0)
                 print("Waiting...")
                 pass
             
-            time.sleep(0)
             
         finally:
             _.unsubscribe(ws, channels)

@@ -100,7 +100,6 @@ def main():
         while 1:
             try:
                 ws_once()
-                time.sleep(0.2)
             except:
                 print("SERVER EOF, EXIT OUT ALL THE WAY")
                 raise sys.exit(2)
@@ -113,9 +112,6 @@ def main():
             if content.startswith('system: '):
                 kw['role'], content = content.strip().split(': ', 1)
                 pass
-            #if 'IMAGE==>' in content:
-            #    content, kw['image'] = content.strip().split('IMAGE==>')
-            #    pass
             pub(ws, CH_IN, content, **kw)
             pass
         print("EOF")
