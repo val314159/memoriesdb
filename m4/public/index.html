@@ -5,54 +5,327 @@
       padding: 0;
   }
   .container {
-      display: flex; /* Makes the container a flex container */
-      flex-direction: column; /* Stacks the children vertically */
-      min-height: 100vh; /* Ensures the container takes up at least the full viewport height */
-      background: gray;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      xbackground: gray;
   }
   .header {
+      display: flex;
       height: auto; /* Or set a fixed height if needed */
-      background: cyan;
+      xbackground: cyan;
       position: sticky;
       top: 0;
       width: 100%;
   }
   .content {
-      flex: 1; /* Makes the content div take up all available vertical space */
-      overflow: auto; /* Adds scrollbars if content exceeds the div's height */
-      /* Add styling for your content */
-      background: yellow;
+      flex: 1;
+      overflow: auto;
+      xbackground: yellow;
   }
-   input {
-       width: 100%;
-   }
-   textarea {
-       width: 100%;
-       field-sizing: content;       
-       min-height: 200px;
-   }
+  input {
+      flex-grow:    1;
+      margin-left:  10px;
+      margin-right: 10px;
+  }
+  textarea {
+      border: 0;
+      
+      width: 100%;
+      field-sizing: content;       
+      min-height: 200px;
+  }
 </style>
-<script>
-  function keypress(e){
-      if(e.key!='Enter')return
-      //console.log("KEYPRESS1 "+e.key)
-      const input = e.target.value.trim()
-      e.target.value = ''
-      e.target.blur()
-      if(!input)return
-      //e.target.focus()
-      console.log("INPUT "+input)
-      user(input)
-  }
-</script>
-<div class=container>
+<div class=container id=container>
   <div class=header>
     <b>Input:</b>
-    <input id=input onkeypress=keypress(event)>
+    <input id=input onkeypress=app.keypress(event)>
+    &nbsp;&nbsp;&nbsp;
+    <button onclick=app.top()> Top </button>
+    &nbsp;&nbsp;&nbsp;
+    <button onclick=app.bot()> Bottom </button>
+    &nbsp;&nbsp;&nbsp;
   </div>
-  <div class=content>
-    <hr>
-    <textarea id=textarea></textarea>
+  <div class=content id=content>
+    
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <li><b>System:</b><span>You are a helpful assistant.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+    <li><b>Assistant:</b><span>Well, hello.</span></li>
+    <li><b>User:</b><span>Hello.</span></li>
+
+    <!--
+	<textarea id=textarea></textarea>
+	-->
   </div>
 </div>
 <script src=app.js></script>
