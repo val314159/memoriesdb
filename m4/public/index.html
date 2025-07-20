@@ -8,12 +8,10 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      xbackground: gray;
   }
   .header {
       display: flex;
       height: auto; /* Or set a fixed height if needed */
-      xbackground: cyan;
       position: sticky;
       top: 0;
       width: 100%;
@@ -21,33 +19,27 @@
   .content {
       flex: 1;
       overflow: auto;
-      xbackground: yellow;
   }
   input {
       flex-grow:    1;
       margin-left:  10px;
       margin-right: 10px;
   }
-  textarea {
-      border: 0;
-      
-      width: 100%;
-      field-sizing: content;       
-      min-height: 200px;
-  }
 </style>
-<div class=container id=container>
+<div class=container>
   <div class=header>
     <b>Input:</b>
-    <input id=input onkeypress=app.keypress(event)>
+    <input id=input onkeypress=app.keypress(event)
+	   autofocus
+	   placeholder="Type Input Here..."
+	   >
     &nbsp;&nbsp;&nbsp;
     <button onclick=app.top()> Top </button>
     &nbsp;&nbsp;&nbsp;
     <button onclick=app.bot()> Bottom </button>
     &nbsp;&nbsp;&nbsp;
   </div>
-  <div class=content id=content>
-    
+  <div class=content>
     <li><b>System:</b><span>You are a helpful assistant.</span></li>
     <li><b>User:</b><span>Hello.</span></li>
     <li><b>Assistant:</b><span>Well, hello.</span></li>
@@ -323,9 +315,6 @@
     <li><b>Assistant:</b><span>Well, hello.</span></li>
     <li><b>User:</b><span>Hello.</span></li>
 
-    <!--
-	<textarea id=textarea></textarea>
-	-->
   </div>
 </div>
 <script src=app.js></script>
