@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
-
 from gevent import monkey as _;_.patch_all()
-import os
-import sys
-import time
-import json
-import gevent
+import os, sys, time, json, gevent, gevent.queue
 from gevent.fileobject import FileObject
 from bottle import Bottle, request, response, redirect, static_file, app
-#from websocket import WebSocket
 from geventwebsocket import WebSocketServer, WebSocketError
 from geventwebsocket.websocket import (
     MSG_CLOSED, MSG_ALREADY_CLOSED, MSG_SOCKET_DEAD)
-
-print("std test", file=sys.stderr, flush=True)
 
 # This makes stdin's FD non-blocking and replaces sys.stdin with
 # a wrapper that is integrated into the event loop
@@ -88,6 +80,16 @@ class Application(Bottle):
             if not ch:
                 del _.Channel[name]
 
+    def drain(_):
+        while 1:
+            print("WAIT FOR Q DRAIN!!!!!!!!")
+            (ws, ch, msg) = _.Q.get()
+            print("GOT ITEM", (ch, msg))
+            _.pub_raw(ws, ch, msg)
+            print("Waiting...")
+            pass
+        pass
+
     def pub_raw(_, ws, channel, raw):
         for wsid2, ws2 in _.Channel.get(channel,[]):
             if ws == ws2:
@@ -96,10 +98,10 @@ class Application(Bottle):
                 print("SEND RAW", ws2, raw)
                 ws2.send(raw)
 
-    def pub(_, ws, msg, ch = None):
-        channel = ch or  msg['params']['channel']
-        raw = json.dumps(msg)
-        _.pub_raw(ws, channel, raw)
+    #def pub(_, ws, msg, ch = None):
+    #    channel = ch or  msg['params']['channel']
+    #    raw = json.dumps(msg)
+    #    _.pub_raw(ws, channel, raw)
 
     def process(_, ws):
         wsid = hex(id(ws))
@@ -117,10 +119,10 @@ class Application(Bottle):
                 print("CHN", (channel,), "!")
                 raw = ws.receive()
                 print("Got", (raw,), "!")
-                _.pub_raw(ws, channel, raw)
+                _.Q.put((ws, channel, raw))
+                #_.pub_raw(ws, channel, raw)
                 print("Waiting...")
                 pass
-            
             
         finally:
             _.unsubscribe(ws, channels)
@@ -130,7 +132,13 @@ class Application(Bottle):
         pass
 
     def run(_, host='', port=5002):
+
+        # does this even do anything?
         _.config['dns_lookups'] = False
+        
+        _.Q = gevent.queue.Queue()
+        gevent.spawn(_.drain)
+        
         svr = WebSocketServer((host, port), _)
         print(f"Starting server with gevent on http://{host}:{port}")
         svr.serve_forever()

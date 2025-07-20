@@ -20,7 +20,7 @@ class WsApp {
     }
     pub(content,  role,  channel){
 	print("pub1")
-	const params = { channel:      channel || CH_OUT,
+	const params = { channel:      channel || CH_IN,
 			 role   :      role    || 'user',
 			 content:      content,
 			 uuid   : this.uuid,
