@@ -3,55 +3,73 @@ print("// app.js //")
 const CH         = 'llm',
       CH_IN      = CH + '-in',
       CH_OUT     = CH + '-out',
-      WS_BASE    = 'ws://localhost:5002/ws',
-      WS_ARGS    = '?c=' + CH_OUT,
-      WS_TIMEOUT = 5 * 1000,
-      _ = new class App {
-	  constructor(){
-	      const _ = this
-	      _.uuid    = '00000000-0000-0000-0000-000000000000'
-	      _.session = '11111111-1111-1111-1111-111111111111'
-	  }
-	  ondata(data){
-	      print("DATA", data['method'], dumps(data['params']))
-	  }
-	  pub(content, role, channel){
-	      role    ||= 'user'
-	      channel ||= CH_OUT
-	      const uuid    = '00000000-0000-0000-0000-000000000000',
-		    session = '11111111-1111-1111-1111-111111111111',
-		    method = 'pub',
-		    params = { uuid, role, channel, content },
-		    mesg   = { method, params }
-	      _.ws.send(dumps(mesg))
-	  }
-	  connect(){
-	      const uri = WS_BASE + WS_ARGS
-	      print(`Connecting WebSocket ${uri}...`)
-	      _.ws = new WebSocket(uri)
-	      const connectTimeout = setTimeout(()=>{
-		  print("WEBSOCKET TIMEOUT, let's retry")
-		  _.connect()
-	      }, WS_TIMEOUT)
-	      _.ws.onopen=e=>{
-		  //print("WEBSOCKET OPEN1", e)	
-		  clearTimeout(connectTimeout)
-		  print("WEBSOCKET OPEN2", e)	
-	      }
-	      _.ws.onmessage=e=>{
-		  print("WEBSOCKET MESG ", e)	
-		  _.ondata(loads(e.data))
-	      }
-	      _.ws. onclose=e=>{
-		  print("WEBSOCKET CLOSE", e)	
-		  setTimeout(_.connect, WS_TIMEOUT)
-	      }
-	      _.ws.onerror=e=>{
-		  print("WEBSOCKET ERROR", e)
-		  _.connect()
-	      }
-	      return _
-	  }
-      }, app = _.connect()
-const user=(content, channel)=>pub(content)
-const  sys=(content, channel)=>pub(content, 'system')
+      WS_BASE    = 'ws://localhost:5002/ws?c=',
+      WS_TIMEOUT = 5 * 1000
+class WsApp {
+    constructor(){
+	this.uuid    = '00000000-0000-0000-0000-000000000000'
+	this.session = '99999999-9999-9999-9999-999999999999'
+    }
+    ondata(data){
+	print("ONDATA", dumps(data))
+	const method = data['method'],
+	      params = data['params']
+	if(method=="initialize")
+	    print("WE ARE INITIALIZEING DO WE HAVE A SESSION ID=?")
+	this._ondata(data)
+    }
+    pub(content, role, channel){
+	this.ws.send( dumps( { method: 'pub',
+			       params: { channel:      channel || CH_OUT,
+					 role   :      role    || 'user',
+					 content:      content,
+					 uuid   : this.uuid,
+					 session: this.session } } ) )
+    }
+    resetInactivityTimeout(){
+	if (this.inactivityTimeout)
+	    clearTimeout(this.inactivityTimeout)
+	this.inactiveTimeout = setTimeout(()=>{
+	    print("INACTIVE TIMEOUT, just reset the timer...")
+	    this.resetInactivityTimeout()
+	}, WS_TIMEOUT)
+    }
+    resetConnectionTimeout(){
+	this.connectionTimeout = setTimeout(()=>{
+	    print("CONNECT TIMEOUT, let's retry")
+	    this.connect()
+	}, WS_TIMEOUT)
+    }
+    connect(){
+	const uri = WS_BASE + CH_OUT
+	print(`Connecting WebSocket ${uri}...`)
+	this.ws = new WebSocket(uri)
+	this.resetConnectionTimeout()
+	this.ws.onopen    =e=>{	
+	    print("WEBSOCKET OPEN", e)
+	    this.resetInactivityTimeout()
+	    clearTimeout(this.connectionTimeout)
+	}
+	this.ws.onmessage =e=>{	
+	    print("WEBSOCKET MESG", e)
+	    this.resetInactivityTimeout()
+	    this.ondata(loads(e.data))
+	}
+	this.ws. onclose  =e=>{
+	    print("WEBSOCKET CLOS", e)
+	    setTimeout(this.connect, WS_TIMEOUT)
+	}
+	this.ws.onerror   =e=>{
+	    print("WEBSOCKET ERRR", e),
+	    this.connect()
+	}
+	return this
+    }
+}
+const app = (new class App extends WsApp {
+    _ondata(params){
+	print("DATA", dumps(params))
+    }
+}).connect()
+const  sys = (content, channel)=> app.pub(content, 'system')
+const user = (content, channel)=> app.pub(content)
