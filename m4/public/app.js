@@ -37,7 +37,7 @@ class WsApp {
 	if (this.inactivityTimeout)
 	    clearTimeout(this.inactivityTimeout)
 	this.inactiveTimeout = setTimeout(()=>{
-	    print("INACTIVE TIMEOUT, just reset the timer...")
+	    print("INACTIVE TIMEOUT, just reset the timer...", WS_TIMEOUT2)
 	    this.resetInactivityTimeout()
 	}, WS_TIMEOUT2)
     }
@@ -54,12 +54,12 @@ class WsApp {
 	this.resetConnectionTimeout()
 	this.ws.onopen    =e=>{	
 	    print("WEBSOCKET OPEN", e)
-	    this.resetInactivityTimeout()
+	    //this.resetInactivityTimeout()
 	    clearTimeout(this.connectionTimeout)
 	}
 	this.ws.onmessage =e=>{	
 	    print("WEBSOCKET MESG", e)
-	    this.resetInactivityTimeout()
+	    //this.resetInactivityTimeout()
 	    this.ondata(loads(e.data))
 	}
 	this.ws. onclose  =e=>{
