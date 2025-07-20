@@ -138,7 +138,8 @@ class Application(Bottle):
             while channel:= ws.receive():
                 print("CHN", (channel,), "!")
                 raw = ws.receive()
-                print("Got", (raw,), "!")
+                print("Got1", (raw,), "!")
+                print("Got2", (ws, channel,))
                 _.Q.put((ws, channel, raw))
                 #_.pub_raw(ws, channel, raw)
                 print("Waiting...")

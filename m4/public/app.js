@@ -9,8 +9,6 @@ class WsApp {
     constructor(){
 	this.uuid    = 'TEST'
 	this.session = 'LAST'
-	//is.uuid    = '00000000-0000-0000-0000-000000000000'
-	//is.session = '99999999-9999-9999-9999-999999999999'
     }
     ondata(data){
 	print("ONDATA", dumps(data))
@@ -18,24 +16,32 @@ class WsApp {
 	      params = data['params']
 	if(method=="initialize"){
 	    print("WE ARE INITIALIZING DO WE HAVE A SESSION ID?")
+	    this.uuid    = params['uuid']
+	    this.session = params['session']
+	    print(this.uuid)
+	    print(this.session)
 	}
 	this._ondata(data)
     }
     pub(content,  role,  channel){
 	print("pub1")
-	const params = { channel:      channel || CH_IN,
-			 role   :      role    || 'user',
+	channel ||= CH_IN
+	role    ||= 'user'
+	const params = { channel:      channel,
+			 role   :      role,
 			 content:      content,
 			 uuid   : this.uuid,
 			 session: this.session }
 	print("pub2")
-	this.ws.send(          channel             )
+	this.ws.send( channel )
 	print("pub3")
 	this.ws.send( dumps( { method: 'pub',
 			       params: params  } ) )
 	print("pub4")
     }
     resetInactivityTimeout(){
+	return
+	
 	if (this.inactivityTimeout)
 	    clearTimeout(this.inactivityTimeout)
 	this.inactiveTimeout = setTimeout(()=>{
@@ -66,11 +72,11 @@ class WsApp {
 	}
 	this.ws. onclose  =e=>{
 	    print("WEBSOCKET CLOS", e)
-	    setTimeout(this.connect, WS_TIMEOUT)
+	    //setTimeout(this.connect, WS_TIMEOUT)
 	}
 	this.ws.onerror   =e=>{
-	    print("WEBSOCKET ERRR", e),
-	    this.connect()
+	    print("WEBSOCKET ERRR", e)
+	    //setTimeout(this.connect, WS_TIMEOUT)
 	}
 	return this
     }
