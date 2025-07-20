@@ -4,7 +4,8 @@ const CH         = 'llm',
       CH_IN      = CH + '-in',
       CH_OUT     = CH + '-out',
       WS_BASE    = 'ws://localhost:5002/ws?c=',
-      WS_TIMEOUT = 5 * 1000
+      WS_TIMEOUT = 5 * 1000,
+      WS_TIMEOUT2= 15 * 1000
 class WsApp {
     constructor(){
 	this.uuid    = 'TEST'
@@ -23,31 +24,22 @@ class WsApp {
 	}
 	this._ondata(data)
     }
-    pub(content,  role,  channel){
-	print("pub1")
-	channel ||= CH_IN
-	role    ||= 'user'
-	const params = { channel:      channel,
-			 role   :      role,
-			 content:      content,
-			 uuid   : this.uuid,
-			 session: this.session }
-	print("pub2")
-	this.ws.send( channel )
-	print("pub3")
+    pub(content, role, channel){
+	this.ws.send( channel ||= CH_IN )
 	this.ws.send( dumps( { method: 'pub',
-			       params: params  } ) )
-	print("pub4")
+			       params: { channel:      channel,
+					 role   :      role || 'user',
+					 content:      content,
+					 uuid   : this.uuid,
+					 session: this.session } } ) )
     }
     resetInactivityTimeout(){
-	return
-	
 	if (this.inactivityTimeout)
 	    clearTimeout(this.inactivityTimeout)
 	this.inactiveTimeout = setTimeout(()=>{
 	    print("INACTIVE TIMEOUT, just reset the timer...")
 	    this.resetInactivityTimeout()
-	}, WS_TIMEOUT)
+	}, WS_TIMEOUT2)
     }
     resetConnectionTimeout(){
 	this.connectionTimeout = setTimeout(()=>{
