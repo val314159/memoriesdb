@@ -7,6 +7,8 @@ from geventwebsocket import WebSocketServer, WebSocketError
 from geventwebsocket.websocket import (
     MSG_CLOSED, MSG_ALREADY_CLOSED, MSG_SOCKET_DEAD)
 
+from db_sync import check_valid_uuid, get_last_session, get_current_user_id
+
 # This makes stdin's FD non-blocking and replaces sys.stdin with
 # a wrapper that is integrated into the event loop
 stdin = FileObject(sys.stdin)
@@ -110,7 +112,25 @@ class Application(Bottle):
         try:
             print("New connection...")
             _.subscribe(ws, channels)
+
+            if 1:
+                uuid = get_current_user_id()
+ 
+                print("UUID?", uuid)                
+                check_valid_uuid(uuid)
+                print("UUID!", uuid)
+                pass
+
+            if 1:
+                row = get_last_session(uuid)
+                print("ROW:", row)
+                session_id = str(row['id'])
+                print("SESS", session_id)
+                pass
+            
             call(ws, 'initialize',
+                 uuid = uuid,
+                 session = session_id,
                  wsid = wsid,
                  channels = channels)
         

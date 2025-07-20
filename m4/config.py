@@ -12,6 +12,7 @@ PG_DB = os.getenv("POSTGRES_DB", os.getenv("PG_DB", "memories"))
 
 # Build connection string from individual parameters
 DSN = f"postgresql://{PG_USER}:{PG_PASS}@{PG_HOST}:{PG_PORT}/{PG_DB}"
+DSN2= f"postgresql://{PG_USER}:{PG_PASS}@{PG_HOST}:5432/{PG_DB}"
 
 # Ollama endpoint if not debug
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")

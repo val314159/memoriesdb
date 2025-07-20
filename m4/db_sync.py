@@ -23,7 +23,11 @@ def get_memories_by_uuid(created_by: str, suffix='') -> List:
     WHERE created_by = %s and _deleted_at IS NULL
     """
     if suffix: query += ' ' + suffix
-    conn = psycopg.connect(DSN, row_factory=dict_row)
+    try:
+        conn = psycopg.connect(DSN, row_factory=dict_row)
+    except:
+        conn = psycopg.connect(DSN2,row_factory=dict_row)
+        pass
     cursor = conn.cursor()
     cursor.execute(query, (created_by,))
     for row in cursor:

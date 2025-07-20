@@ -7,15 +7,18 @@ const CH         = 'llm',
       WS_TIMEOUT = 5 * 1000
 class WsApp {
     constructor(){
-	this.uuid    = '00000000-0000-0000-0000-000000000000'
-	this.session = '99999999-9999-9999-9999-999999999999'
+	this.uuid    = 'TEST'
+	this.session = 'LAST'
+	//is.uuid    = '00000000-0000-0000-0000-000000000000'
+	//is.session = '99999999-9999-9999-9999-999999999999'
     }
     ondata(data){
 	print("ONDATA", dumps(data))
 	const method = data['method'],
 	      params = data['params']
-	if(method=="initialize")
-	    print("WE ARE INITIALIZEING DO WE HAVE A SESSION ID=?")
+	if(method=="initialize"){
+	    print("WE ARE INITIALIZING DO WE HAVE A SESSION ID?")
+	}
 	this._ondata(data)
     }
     pub(content,  role,  channel){

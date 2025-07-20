@@ -1,5 +1,5 @@
 import os, sys, psycopg
-from config import PG_USER, PG_PASS, PG_HOST, PG_PORT, PG_DB, DEBUG, DSN
+from config import PG_USER, PG_PASS, PG_HOST, PG_PORT, PG_DB, DEBUG, DSN, DSN2
 from typing import Any, Dict, List, Optional, Union, cast
 from typing import Any, Dict, List, Optional, Tuple, Union
 
