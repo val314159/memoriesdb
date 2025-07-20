@@ -13,8 +13,11 @@ class SubAgentBase:
         '''this way an error doesn't leave garbage in _.ws'''
         ws = websocket.WebSocket()
         ws.connect(f'{WS_BASE}?c={IN_CHANNEL}')
-        _.ws = ws
+        _._ws = ws
         pass
+
+    def ws(_):
+        return _._ws
 
     def  pub(_, params):
         return _._pub(**params)
@@ -26,7 +29,7 @@ class SubAgentBase:
         _.connect_ws()
         while 1:
             print("Waiting on socket...")
-            raw = _.ws.recv()
+            raw = _._ws.recv()
             if not raw:
                 raise EOFError
             msg = json.loads(raw)
