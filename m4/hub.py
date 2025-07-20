@@ -144,8 +144,8 @@ def _():
     if ws:= request.environ.get('wsgi.websocket'):
         return request.app.process(ws)
     raise Exception('no websocket')
-'''
-@app.post('/uploads')
+
+@app.post('/upload')
 def upload_file():
     add_cors_headers(response.headers,
                      request.headers.get('Origin'))
@@ -164,11 +164,8 @@ def upload_file():
     image_file = request.files['image']
     if not image_file.filename:
         return {'error': 'No selected file'}, 400
-    filename = f"image_{timestamp}.jpg"
-    #print("QPRINT1", filename)
-    #print("QPRINT2", os.path.join('uploads', filename))
+    filename = f"image.jpg"
     image_file.save(os.path.join('uploads', filename))
-    #print("QPRINT3", filename)
     assert 0==os.system('touch "' + os.path.join('uploads', filename+'.DUN"'))
     return {'message': f'File {filename} uploaded successfully'}
 
@@ -184,6 +181,4 @@ def serve_file(path, root=os.getenv('ROOT','./public/')):
         return redirect(path + '/')
     return static_file(path, root)
 
-from .api import rest
-'''
 if __name__ == '__main__': app.run()
