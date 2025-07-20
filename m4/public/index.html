@@ -1,3 +1,59 @@
-index
+<style>
+  body {
+      margin: 0;
+      border: 0;
+      padding: 0;
+  }
+  .container {
+      display: flex; /* Makes the container a flex container */
+      flex-direction: column; /* Stacks the children vertically */
+      min-height: 100vh; /* Ensures the container takes up at least the full viewport height */
+      background: gray;
+  }
+  .header {
+      height: auto; /* Or set a fixed height if needed */
+      background: cyan;
+      position: sticky;
+      top: 0;
+      width: 100%;
+  }
+  .content {
+      flex: 1; /* Makes the content div take up all available vertical space */
+      overflow: auto; /* Adds scrollbars if content exceeds the div's height */
+      /* Add styling for your content */
+      background: yellow;
+  }
+   input {
+       width: 100%;
+   }
+   textarea {
+       width: 100%;
+       field-sizing: content;       
+       min-height: 200px;
+   }
+</style>
+<script>
+  function keypress(e){
+      if(e.key!='Enter')return
+      //console.log("KEYPRESS1 "+e.key)
+      const input = e.target.value.trim()
+      e.target.value = ''
+      e.target.blur()
+      if(!input)return
+      //e.target.focus()
+      console.log("INPUT "+input)
+      user(input)
+  }
+</script>
+<div class=container>
+  <div class=header>
+    <b>Input:</b>
+    <input id=input onkeypress=keypress(event)>
+  </div>
+  <div class=content>
+    <hr>
+    <textarea id=textarea></textarea>
+  </div>
+</div>
 <script src=app.js></script>
 <script src=app2.js></script>
