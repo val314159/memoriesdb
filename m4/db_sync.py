@@ -1,5 +1,9 @@
 from db_ll_sync import *
 
+#import uuid
+#from typing import Any, Dict, List, Optional, Tuple, Union
+
+from config import OLLAMA_URL, EMBEDDING_MODEL, CHAT_MODEL
 from logging_setup import get_logger
 logger = get_logger(__name__)
 
