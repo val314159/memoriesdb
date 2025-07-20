@@ -1,5 +1,5 @@
 const print=console.log, loads=JSON.parse, dumps=JSON.stringify
-print("// app.js //")
+//print("// app.js //")
 const CH         = 'llm',
       CH_IN      = CH + '-in',
       CH_OUT     = CH + '-out',
@@ -12,15 +12,13 @@ class WsApp {
 	this.session = 'LAST'
     }
     ondata(data){
-	print("ONDATA", dumps(data))
+	//print("ONDATA", dumps(data))
 	const method = data['method'],
 	      params = data['params']
 	if(method=="initialize"){
-	    print("WE ARE INITIALIZING DO WE HAVE A SESSION ID?")
 	    this.uuid    = params['uuid']
 	    this.session = params['session']
-	    print(this.uuid)
-	    print(this.session)
+	    print("INITIALIZE", this.uuid, this.session)
 	}
 	this._ondata(data)
     }
@@ -58,7 +56,7 @@ class WsApp {
 	    clearTimeout(this.connectionTimeout)
 	}
 	this.ws.onmessage =e=>{	
-	    print("WEBSOCKET MESG", e)
+	    //print("WEBSOCKET MESG", e)
 	    //this.resetInactivityTimeout()
 	    this.ondata(loads(e.data))
 	}
@@ -73,10 +71,3 @@ class WsApp {
 	return this
     }
 }
-const app = (new class App extends WsApp {
-    _ondata(params){
-	print("DATA", dumps(params))
-    }
-}).connect()
-const  sys = (content, channel)=> app.pub(content, 'system')
-const user = (content, channel)=> app.pub(content)
