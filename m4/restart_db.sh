@@ -24,8 +24,10 @@
     echo "Syncing uv..."
     uv sync
     echo "Syncing complete"
-    echo "Loading test schema..."
-    uv run load_convo.py chat2.yml
+    echo "Loading test chat1.yml..."
+    uv run load_convo.py chat1.yml --loadonly | cut -f2 >1.out
+    echo "Loading test chat2.yml..."
+    uv run load_convo.py chat2.yml --loadonly | cut -f2 >2.out
     echo "Loading complete"
 
 )

@@ -8,7 +8,7 @@ class Convo(SubAgentBase):
     def __init__(_,tools=funcs.Tools, model=os.getenv('MODEL', 'llama3.1')):
         _.tools, _.model = tools, model
         pass
-    def _pub(_, content='', model='', uuid, session, **kw):
+    def _pub(_, content, uuid, session, model='', toolset='', **kw):
         sess = ESP(uuid, session, funcs, _.ws(), model or _.model, _.tools)
         chat_round(sess, content, OUT_CHANNEL)
         return

@@ -20,12 +20,18 @@ def main():
         print("BAD FORMAT")
         raise SystemExit(1)
 
-    print('='*80)
+    if '--loadonly' not in sys.argv:
+        print('='*80)
+        pass
     
     new_title = "NewSession" + ts.replace(' ','T')
-    convo_id = db.store_convo(history, new_title)    
-    for msg in db.load_simplified_convo(convo_id):
-        print("loaded", msg)
+    convo_id = db.store_convo(history, new_title)
+    print(f"Saved\t{convo_id}\t{new_title}")
+    
+    if '--loadonly' not in sys.argv:
+        for msg in db.load_simplified_convo(convo_id):
+            print("loaded", msg)
+            pass
         pass
     pass
 
