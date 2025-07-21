@@ -4,6 +4,7 @@ display {
 message {
     display: block;
     border: 1px dashed blue;
+    background: lightblue;
 } 
 thinking {
     display: block;
@@ -11,7 +12,7 @@ thinking {
 }
 content {
     display: block;
-    border: 1px dotted red;
+    xborder: 1px dotted red;
 }
 body {
     margin: 0;
@@ -24,23 +25,25 @@ body {
     min-height: 100vh;
 }
 .header {
-    display: flex;
-    height: auto; /* Or set a fixed height if needed */
+    xdisplay: flex;
+    xheight: auto; /* Or set a fixed height if needed */
     position: sticky;
+    xposition: absolute;
     top: 0;
-    width: 100%;
+    xleft: 0;
+    xwidth: 100%;
 }
 .display {
-    flex: 1;
-    overflow: auto;
+    xflex: 1;
+    xoverflow: auto;
 }
 button {
-    flex-shrink: 1;
-    margin-left:  10px;
-    margin-right: 10px;
+    xflex-shrink: 1;
+    xmargin-left:  10px;
+    xmargin-right: 10px;
 }
 input {
-    flex-grow:    2;
-    margin-left:  10px;
-    margin-right: 10px;
+    xflex-grow:    2;
+    xmargin-left:  10px;
+    xmargin-right: 10px;
 }
