@@ -11,6 +11,11 @@ const app = (new class App extends WsApp {
 	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
 	this.pub('listConvos', 'user', DB_IN)	
     }
+    newConvo(){
+	this.displayText("NEW CONVO: " + this.uuid)
+	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
+	this.pub('newConvo', 'user', DB_IN)	
+    }
     top(){window.scrollTo(0, 0)}
     bot(){window.scrollTo(0, document.body.scrollHeight)}
     incrLastId()     {return ++this.lastId}
