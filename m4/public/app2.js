@@ -1,6 +1,6 @@
 const app = (new class App extends WsApp {
     _onpub(params){
-	print("PARAMS", dumps(params))
+	//print("PARAMS", dumps(params))
 	var used = false;
 	if(params.thinking){
 	    used = true
@@ -10,6 +10,7 @@ const app = (new class App extends WsApp {
 	    used = true
 	    if(params.role!='user'){	
 		this.appendContents(params.content)
+		this.bot()
 		return
 	    }
 	    const id = this.incrLastId()
@@ -31,6 +32,7 @@ ${params.content}</div>
 	if(!used){
 	    print("WARNING, NOT USED " + dumps(params))
 	}
+	this.bot()
     }
     keypress(e){
 	if(e.key!='Enter')return
@@ -42,9 +44,17 @@ ${params.content}</div>
 	//e.target.focus()
 	console.log("INPUT "+input)
 	user(input)
+	this.bot()
     }
     top(){window.scrollTo(0, 0)}
-    bot(){window.scrollTo(0, document.body.scrollHeight)}
+    bot(){
+	print("BOT")
+	//const container = GEBI('container')
+	//container.scrollTop = container.scrollHeight;
+	//setTimeout(()=>
+	window.scrollTo(0, document.body.scrollHeight)
+	//, 1)
+    }
 }).connect()
 const sys = (content, channel)=> app.pub(content, 'system')
 const user= (content, channel)=> app.pub(content)

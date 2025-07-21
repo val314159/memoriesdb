@@ -1,6 +1,9 @@
 <link rel="stylesheet" href="style.css">
-<container>
-  <header>
+<container class="container" id="container">
+  <div class="display" id="display">
+    <hr>
+  </div>
+  <header class="header" id="header">
     <label>Input:</label>
     <input id="input" autofocus
 	   onkeypress="app.keypress(event)"
@@ -8,9 +11,6 @@
     <button onclick="app.top()">Top</button>
     <button onclick="app.bot()">Bottom</button>
   </header>
-  <div id="display">
-    <hr>
-  </div>
 </container>
 <script src="app.js"></script>
 <script src="app2.js"></script>

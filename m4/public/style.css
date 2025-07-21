@@ -12,7 +12,7 @@ thinking {
 }
 content {
     display: block;
-    xborder: 1px dotted red;
+    background: lightgreen;
 }
 body {
     margin: 0;
@@ -25,25 +25,25 @@ body {
     min-height: 100vh;
 }
 .header {
-    xdisplay: flex;
-    xheight: auto; /* Or set a fixed height if needed */
+    display: flex;
+    height: auto; /* Or set a fixed height if needed */
     position: sticky;
     xposition: absolute;
-    top: 0;
-    xleft: 0;
-    xwidth: 100%;
+    xtop: 0;
+    bottom: 0;
+    width: 100%;
 }
 .display {
-    xflex: 1;
-    xoverflow: auto;
+    flex: 1;
+    overflow: auto;
 }
 button {
-    xflex-shrink: 1;
-    xmargin-left:  10px;
-    xmargin-right: 10px;
+    flex-shrink: 1;
+    margin-left:  10px;
+    margin-right: 10px;
 }
 input {
-    xflex-grow:    2;
-    xmargin-left:  10px;
-    xmargin-right: 10px;
+    flex-grow:    2;
+    margin-left:  10px;
+    margin-right: 10px;
 }
