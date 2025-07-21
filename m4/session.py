@@ -33,7 +33,10 @@ class EphemeralSessionProxy:
 def materialize_history(_):
     """this thin wrapper will grow into its own subsystem"""
     print("--------->MATHIST")
-    for msg in db_sync.load_simplified_convo(_.session_id):
+    #for msg in db_sync.load_simplified_convo(_.session_id):
+    msgs = db_sync.load_simplified_convo(_.session_id)
+    print("--------->MATHIST2")
+    for msg in msgs:
         if msg.get('thinking'):
             del msg['thinking']
             pass

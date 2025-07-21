@@ -39,7 +39,14 @@ class SubAgentBase:
             if method=='initialize':  
                 print("INIT", params)
             elif method=='pub':
-                _.pub(params)
+                try:
+                    _.pub(params)
+                except:
+                    import traceback
+                    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                    traceback.print_exc()
+                    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                    return
             else:
                 print("*"*80)
                 print("ERROR, BAD PACKET", msg)
