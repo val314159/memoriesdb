@@ -1,7 +1,7 @@
 const loads=JSON.parse, dumps=JSON.stringify, print=console.log
 const CH         = 'llm',
-      CH_IN      = CH + '-in',
       CH_OUT     = CH + '-out',
+      CH_IN      = CH + '-in',
       WS_BASE    = 'ws://localhost:5002/ws?c=',
       WS_TIMEOUT =  5 * 1000,
       WS_TIMEOUT2= 15 * 1000

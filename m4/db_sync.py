@@ -293,30 +293,8 @@ def simplify_convo(convo):
 
 
 def load_convo(suid):
-    print("LC1")
     session = get_memory_by_id(suid)
-    print("LC2")
-    yield session
-    print("LC3")
-
-    print("LC4-9")
-    v = get_memories_by_target( session['id'] )
-    print("LC5-9", v)
-    for vertex in v:
-        print("LC5-8", vertex)
-        yield vertex
-        pass
-    print("LC4")
-    return
-    for targets_edge in get_edges_by_target( session['id'] ):
-        print("LC5")
-        source_id = targets_edge['source_id']
-        print("LC6")
-        vertex = get_memory_by_id(source_id)
-        print("LC7")
-        print("LC8-8", vertex)
-        pass
-    print("LC9")
+    return get_memories_by_target( session['id'] )
         
 
 def store_convo(history, title):

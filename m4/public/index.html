@@ -1,16 +1,22 @@
 <link rel="stylesheet" href="style.css">
 <container class="container" id="container">
-  <div class="display" id="display">
-    <hr>
-  </div>
   <header class="header" id="header">
+
+    <button onclick="app.listConvos()">List Conversations</button>
+    
+    <button onclick="app.top()">Top</button>
+    <button onclick="app.bot()">Bottom</button>
+  </header>
+  <div class="display" id="display">
+  </div>
+  <footer class="footer" id="footer">
     <label>Input:</label>
     <input id="input" autofocus
 	   onkeypress="app.keypress(event)"
 	   placeholder="Type Input Here...">
     <button onclick="app.top()">Top</button>
     <button onclick="app.bot()">Bottom</button>
-  </header>
+  </footer>
 </container>
 <script src="app.js"></script>
 <script src="app2.js"></script>

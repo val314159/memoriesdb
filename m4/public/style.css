@@ -28,10 +28,17 @@ body {
     display: flex;
     height: auto; /* Or set a fixed height if needed */
     position: sticky;
-    xposition: absolute;
-    xtop: 0;
+    top: 0;
+    width: 100%;
+    background: lightgray;
+}
+.footer {
+    display: flex;
+    height: auto; /* Or set a fixed height if needed */
+    position: sticky;
     bottom: 0;
     width: 100%;
+    background: lightgray;
 }
 .display {
     flex: 1;
