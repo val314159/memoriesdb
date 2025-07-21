@@ -16,13 +16,14 @@ class Convo(SubAgentBase):
         return
     def _pub(_, content, uuid, session, model='', toolset='', **kw):
         key = ( uuid, session )
-        def bg_pub():
-            sess = ESP(uuid, session, funcs, _.ws(), model or _.model, _.tools)
-            chat_round(sess, content, OUT_CHANNEL)
-            del _.children[key]
-            return
         _._kill_if_possible(key)
-        _.children[key] = gevent.spawn(bg_pub)
+        args = (_._bg_pub, key, content, uuid, session, model, toolset)
+        _.children[key] = gevent.spawn(*args)
+        return
+    def _bg_pub(_, key, content, uuid, session, model, toolset):
+        sess = ESP(uuid, session, funcs, _.ws(), model or _.model, _.tools)
+        chat_round(sess, content, OUT_CHANNEL)
+        del _.children[key]
         return
     pass
 if __name__ == '__main__':
