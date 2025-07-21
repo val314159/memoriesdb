@@ -1,5 +1,4 @@
-const GEBI=x=>document.getElementById(x), print=console.log
-const loads=JSON.parse, dumps=JSON.stringify
+const loads=JSON.parse, dumps=JSON.stringify, print=console.log
 const CH         = 'llm',
       CH_IN      = CH + '-in',
       CH_OUT     = CH + '-out',
@@ -10,17 +9,7 @@ class WsApp {
     constructor(){
 	this.lastId  = 0
 	this.uuid    = 'TEST'
-	this.session = 'LAST'} 
-    incrLastId()     {return ++this.lastId}
-    inputElt()       {return GEBI(   "input-"+app.lastId)}
-    thoughtsElt()    {return GEBI("thinking-"+app.lastId)}
-    contentsElt()    {return GEBI( "content-"+app.lastId)}
-    userInputElt()   {return GEBI(   "input")}
-    displayElt()     {return GEBI(   "display")}
-    appendThoughts(s){this.thoughtsElt().appendChild(
-	document.createTextNode(s))}
-    appendContents(s){this.contentsElt().appendChild(
-	document.createTextNode(s))}
+	this.session = 'LAST'}
     ondata(data){
 	const method = data['method'],
 	      params = data['params']
@@ -31,9 +20,7 @@ class WsApp {
 	} else if (method=="pub") {
 	    this._onpub(params)
 	} else {
-	    alert("BAD METHOD: "+ method)
-	}
-    }
+	    alert("BAD METHOD: "+ method)}}
     pub(content, role, channel){
 	this.ws.send( channel ||= CH_IN )
 	this.ws.send( dumps( { method: 'pub',

@@ -1,4 +1,15 @@
+const GEBI=x=>document.getElementById(x)
 const app = (new class App extends WsApp {
+    top(){window.scrollTo(0, 0)}
+    bot(){window.scrollTo(0, document.body.scrollHeight)}
+    incrLastId()     {return ++this.lastId}
+    inputElt()       {return GEBI(   "input-"+app.lastId)}
+    thoughtsElt()    {return GEBI("thinking-"+app.lastId)}
+    contentsElt()    {return GEBI( "content-"+app.lastId)}
+    userInputElt()   {return GEBI(   "input")}
+    displayElt()     {return GEBI(   "display")}
+    appendThoughts(s){this.thoughtsElt().appendChild(document.createTextNode(s))}
+    appendContents(s){this.contentsElt().appendChild(document.createTextNode(s))}
     _onpub(params){
 	//print("PARAMS", dumps(params))
 	var used = false;
@@ -10,8 +21,7 @@ const app = (new class App extends WsApp {
 	    used = true
 	    if(params.role!='user'){	
 		this.appendContents(params.content)
-		this.bot()
-		return
+		return this.bot()
 	    }
 	    const id = this.incrLastId()
 	    const displayElt = this.displayElt()
@@ -32,7 +42,7 @@ ${params.content}</div>
 	if(!used){
 	    print("WARNING, NOT USED " + dumps(params))
 	}
-	this.bot()
+	return this.bot()
     }
     keypress(e){
 	if(e.key!='Enter')return
@@ -44,16 +54,7 @@ ${params.content}</div>
 	//e.target.focus()
 	console.log("INPUT "+input)
 	user(input)
-	this.bot()
-    }
-    top(){window.scrollTo(0, 0)}
-    bot(){
-	print("BOT")
-	//const container = GEBI('container')
-	//container.scrollTop = container.scrollHeight;
-	//setTimeout(()=>
-	window.scrollTo(0, document.body.scrollHeight)
-	//, 1)
+	return this.bot()
     }
 }).connect()
 const sys = (content, channel)=> app.pub(content, 'system')
