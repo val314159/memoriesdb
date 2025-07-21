@@ -4,30 +4,26 @@ const app = (new class App extends WsApp {
     displayText(s){
 	print(s)
 	GEBI("display").appendChild(document.createTextNode(s))
-	GEBI("display").appendChild(document.createElement("br"))
-    }
+	GEBI("display").appendChild(document.createElement("br"))}
     listConvos(){
 	this.displayText("LIST CONVOS: " + this.uuid)
 	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
-	this.pub('listConvos', 'user', DB_IN)	
-    }
+	this.pub('listConvos', 'user', DB_IN)}
     newConvo(){
 	this.displayText("NEW CONVO: " + this.uuid)
 	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
-	this.pub('newConvo', 'user', DB_IN)	
-    }
+	this.pub('newConvo', 'user', DB_IN)}
     top(){window.scrollTo(0, 0)}
     bot(){window.scrollTo(0, document.body.scrollHeight)}
-    incrLastId()     {return ++this.lastId}
-    inputElt()       {return GEBI(   "input-"+app.lastId)}
-    thoughtsElt()    {return GEBI("thinking-"+app.lastId)}
-    contentsElt()    {return GEBI( "content-"+app.lastId)}
-    userInputElt()   {return GEBI(   "input")}
-    displayElt()     {return GEBI(   "display")}
+      incrLastId(){return ++this.lastId}
+        inputElt(){return GEBI(   "input-"+this.lastId)}
+     thoughtsElt(){return GEBI("thinking-"+this.lastId)}
+     contentsElt(){return GEBI( "content-"+this.lastId)}
+    userInputElt(){return GEBI(   "input")}
+      displayElt(){return GEBI(   "display")}
     appendThoughts(s){this.thoughtsElt().appendChild(document.createTextNode(s))}
     appendContents(s){this.contentsElt().appendChild(document.createTextNode(s))}
     _onpub(params){
-	//print("PARAMS", dumps(params))
 	var used = false;
 	if(params.thinking){
 	    used = true
@@ -62,12 +58,10 @@ ${params.content}</div>
     }
     keypress(e){
 	if(e.key!='Enter')return
-	//console.log("KEYPRESS1 "+e.key)
 	const input = e.target.value.trim()
 	e.target.value = ''
 	e.target.blur()
 	if(!input)return
-	//e.target.focus()
 	console.log("INPUT "+input)
 	user(input)
 	return this.bot()
