@@ -34,8 +34,13 @@ body {
     flex: 1;
     overflow: auto;
 }
+button {
+    flex-shrink: 1;
+    margin-left:  10px;
+    margin-right: 10px;
+}
 input {
-    flex-grow:    1;
+    flex-grow:    2;
     margin-left:  10px;
     margin-right: 10px;
 }

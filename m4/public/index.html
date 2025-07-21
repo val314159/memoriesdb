@@ -2,28 +2,14 @@
 <container>
   <header>
     <label>Input:</label>
-    <input id=input autofocus
-	   onkeypress=app.keypress(event)
-	   placeholder=Type+Input+Here...>
-    &nbsp;&nbsp;&nbsp;
-    <button onclick=app.top()>Top</button>
-    &nbsp;&nbsp;&nbsp;
-    <button onclick=app.bot()>Bottom</button>
-    &nbsp;&nbsp;&nbsp;
+    <input id="input" autofocus
+	   onkeypress="app.keypress(event)"
+	   placeholder="Type Input Here...">
+    <button onclick="app.top()">Top</button>
+    <button onclick="app.bot()">Bottom</button>
   </header>
-  <div id="display">
-    <message id="message-0">
-      <div id="input-0">
-	input // 
-      </div>
-      <thinking id="thinking-0">
-	thinking // 
-      </thinking>
-      <content id="content-0">
-	content // 
-      </content>
-    </message>
-  </div>
+  <div id="display"></div>
 </container>
-<script src=app.js></script>
-<script src=app2.js></script>
+<script src="app.js"></script>
+<script src="app2.js"></script>
+
