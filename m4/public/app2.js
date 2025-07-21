@@ -66,7 +66,7 @@ const app = (new class App extends WsApp {
 	    e.target.blur()
 	    if(!input)return
 	    console.log("INPUT "+input)
-	    user(input)
+	    this.pub(input, this.role)
 	    return this.bot()
 	}
     }
@@ -79,11 +79,15 @@ const app = (new class App extends WsApp {
 	}
     }
     install(){
+	this.role = 'user'
 	const inputElt = GEBI("input")
 	inputElt.addEventListener('keypress', e=>this.keypress(e))
 	document.addEventListener('keypress', e=>this.documentKeypress(e))
 	return this
-    }    
+    }
+    changeRole(x){
+	this.role = x.value
+    }
 } ).install().connect()
-const sys = (content, channel)=> app.pub(content, 'system')
-const user= (content, channel)=> app.pub(content)
+//const sys = (content, channel)=> app.pub(content, 'system')
+//const user= (content, channel)=> app.pub(content)

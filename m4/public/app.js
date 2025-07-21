@@ -23,6 +23,12 @@ class WsApp {
 	    alert("BAD METHOD: "+ method)}}
     pub(content, role, channel){
 	this.ws.send( channel ||= CH_IN )
+	print       ( dumps( { method: 'pub',
+			       params: { channel:      channel,
+					 role   :      role || 'user',
+					 content:      content,
+					 uuid   : this.uuid,
+					 session: this.session } } ) )
 	this.ws.send( dumps( { method: 'pub',
 			       params: { channel:      channel,
 					 role   :      role || 'user',

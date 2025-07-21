@@ -10,9 +10,9 @@
   </div>
   <footer class="footer" id="footer">
     <label>
-      <select id="role">
-	<option>User:</option>
-	<option>System:</option>
+      <select id="role" onchange="app.changeRole(this)">
+	<option value="user"  >&nbsp;&nbsp;User:</option>
+	<option value="system">System:</option>
       </select>
     </label>
     <textarea id="input" autofocus xstyle="width:100%"
