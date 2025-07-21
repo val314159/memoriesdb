@@ -9,12 +9,16 @@
   <div class="display" id="display">
   </div>
   <footer class="footer" id="footer">
-    <label>Input:</label>
-    <input id="input" autofocus
-	   onkeypress="app.keypress(event)"
-	   placeholder="Type Input Here...">
-    <button onclick="app.top()">Top</button>
-    <button onclick="app.bot()">Bottom</button>
+    <label>
+      <select id="role">
+	<option>User:</option>
+	<option>System:</option>
+      </select>
+    </label>
+    <textarea id="input" autofocus xstyle="width:100%"
+	      class="input"
+	      xxonkeypress="app.keypress(event)"
+	      placeholder="Type Input Here..."></textarea>
   </footer>
 </container>
 <script src="app.js"></script>

@@ -49,8 +49,11 @@ button {
     margin-left:  10px;
     margin-right: 10px;
 }
-input {
+.input {
     flex-grow:    2;
-    margin-left:  10px;
-    margin-right: 10px;
+    xmargin-left:  10px;
+    xmargin-right: 10px;
+    margin-bottom: 4px;
+    min-height: 3.3rem; /* 3 lines * 1.1 fudge_factor */
+    width: 100%;
 }

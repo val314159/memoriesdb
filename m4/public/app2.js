@@ -4,7 +4,7 @@ const app = (new class App extends WsApp {
     displayText(s){
 	print(s)
 	GEBI("display").appendChild(document.createTextNode(s))
-	GEBI("display").appendChild(document.createElement("br"))}
+	GEBI("display").appendChild(document.createElement('br'))}
     listConvos(){
 	this.displayText("LIST CONVOS: " + this.uuid)
 	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
@@ -25,7 +25,7 @@ const app = (new class App extends WsApp {
     appendContents(s){this.contentsElt().appendChild(document.createTextNode(s))}
     appendMessage(params){
 	const id = this.incrLastId()
-	const message = this.createElt("message", `\
+	const message = this.createElt('message', `\
 <message id="message-${id}">
   <div      id="input-${id}">${params.role}${id} // ${params.content}</div>
   <thinking id="thinking-${id}">thinking${id} // </thinking>
@@ -33,7 +33,7 @@ const app = (new class App extends WsApp {
 </message>`)
 	this.displayElt().appendChild(message)}
     createElt(tag, html){
-	const elt = document.createElement("message")
+	const elt = document.createElement('message')
 	elt.innerHTML = html
 	return elt}
     _onpub(params){
@@ -54,20 +54,36 @@ const app = (new class App extends WsApp {
 	    this.userInputElt().focus()
 	}
 	if(!used){
-	    print("WARNING, NOT USED " + dumps(params))
+	    print('WARNING, NOT USED ' + dumps(params))
 	}
 	return this.bot()
     }
     keypress(e){
-	if(e.key!='Enter')return
-	const input = e.target.value.trim()
-	e.target.value = ''
-	e.target.blur()
-	if(!input)return
-	console.log("INPUT "+input)
-	user(input)
-	return this.bot()
+	if(e.key=='Enter' && !e.shiftKey && !e.ctrlKey){
+	    event.preventDefault()
+	    const input = e.target.value.trim()
+	    e.target.value = ''
+	    e.target.blur()
+	    if(!input)return
+	    console.log("INPUT "+input)
+	    user(input)
+	    return this.bot()
+	}
     }
-}).connect()
+    documentKeypress(event){
+	if(event.key=='\\' && event.ctrlKey){
+	    event.preventDefault()
+	    print("^BRK", event.target)
+	    GEBI("input").focus()
+	    return this.bot()
+	}
+    }
+    install(){
+	const inputElt = GEBI("input")
+	inputElt.addEventListener('keypress', e=>this.keypress(e))
+	document.addEventListener('keypress', e=>this.documentKeypress(e))
+	return this
+    }    
+} ).install().connect()
 const sys = (content, channel)=> app.pub(content, 'system')
 const user= (content, channel)=> app.pub(content)
