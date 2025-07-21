@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from gevent import monkey as _;_.patch_all()
-import os
+import os, gevent, gevent.queue
 from subagent import SubAgentBase, OUT_CHANNEL
 import funcs2 as funcs
 from session import EphemeralSessionProxy as ESP, chat_round

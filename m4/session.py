@@ -2,6 +2,13 @@ from typing import Any, Dict, List, Optional, Union, cast
 import os, time, json, websocket, ollama, traceback, db_sync, logging_setup
 from config import STREAM, THINK, TOOLS
 logger = logging_setup.get_logger(__name__)
+_ollama_connection = None
+def ollama_connection():
+    global _ollama_connection
+    if not _ollama_connection:
+        _ollama_connection = ollama.Client()
+        pass
+    return _ollama_connection
 def pub(ws, channel, content='', **kw):
     ws.send(channel)
     return ws.send(json.dumps(dict(method='pub',
@@ -59,7 +66,7 @@ def ollama_chat(_, stream=STREAM, think=THINK, tools=TOOLS, max_retries=3, retri
     if tools: kw['tools'] = _.tools
     while retries < max_retries:
         try:
-            return wrap_generator( ollama.chat(**kw) )
+            return wrap_generator( ollama_connection().chat(**kw) )
         except:
             retries += 1
             pass

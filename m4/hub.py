@@ -54,14 +54,6 @@ def add_cors_headers(headers, origin=''):
     return
 
 
-#WS_URI = "ws://localhost:5002/ws"
-#
-#def ws_connect(channels=''):
-#    ws = WebSocket()
-#    ws.connect(WS_URI+'?c='+'&c='.join(channels.split(',')))
-#    return ws
-
-
 class Application(Bottle):
 
     Channel = dict()
@@ -99,11 +91,6 @@ class Application(Bottle):
             else:
                 print("SEND RAW", ws2, raw)
                 ws2.send(raw)
-
-    #def pub(_, ws, msg, ch = None):
-    #    channel = ch or  msg['params']['channel']
-    #    raw = json.dumps(msg)
-    #    _.pub_raw(ws, channel, raw)
 
     def process(_, ws):
         wsid = hex(id(ws))
