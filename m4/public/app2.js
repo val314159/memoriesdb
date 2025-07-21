@@ -1,6 +1,25 @@
 const app = (new class App extends WsApp {
-    _ondata(params){
-	print("DATA", dumps(params))
+    _onpub(params){
+	print("PARAMS", dumps(params))
+	var used = false;
+	if(params.thinking){
+	    used = true
+	    this.appendThoughts(params.thinking)
+	}
+	if(params.content){
+	    used = true
+	    if(params.role=='user')
+		this.appendInput   (params.content)
+	    else
+		this.appendContents(params.content)
+	}
+	if(params.done){
+	    used = true
+	    this.userInputElt().focus()
+	}
+	if(!used){
+	    print("WARNING, NOT USED " + dumps(params))
+	}
     }
     keypress(e){
 	if(e.key!='Enter')return
