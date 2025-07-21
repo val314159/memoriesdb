@@ -25,14 +25,17 @@ const app = (new class App extends WsApp {
     appendContents(s){this.contentsElt().appendChild(document.createTextNode(s))}
     appendMessage(params){
 	const id = this.incrLastId()
-	const message = document.createElement("message")
-	message.innerHTML = `\
+	const message = this.createElt("message", `\
 <message id="message-${id}">
   <div      id="input-${id}">${params.role}${id} // ${params.content}</div>
   <thinking id="thinking-${id}">thinking${id} // </thinking>
   <content  id="content-${id}">  content${id} // </content>
-</message>`
+</message>`)
 	this.displayElt().appendChild(message)}
+    createElt(tag, html){
+	const elt = document.createElement("message")
+	elt.innerHTML = html
+	return elt}
     _onpub(params){
 	var used = false;
 	if(params.thinking){
