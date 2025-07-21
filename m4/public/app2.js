@@ -79,14 +79,13 @@ const app = (new class App extends WsApp {
 	}
     }
     install(){
-	this.role = 'user'
 	const inputElt = GEBI("input")
+	const role_Elt = GEBI("role")
 	inputElt.addEventListener('keypress', e=>this.keypress(e))
 	document.addEventListener('keypress', e=>this.documentKeypress(e))
+	role_Elt.addEventListener('change',   e=>this.role = e.target.value)
+	this.role = role_Elt.value
 	return this
-    }
-    changeRole(x){
-	this.role = x.value
     }
 } ).install().connect()
 //const sys = (content, channel)=> app.pub(content, 'system')
