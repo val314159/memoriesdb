@@ -23,6 +23,16 @@ const app = (new class App extends WsApp {
       displayElt(){return GEBI(   "display")}
     appendThoughts(s){this.thoughtsElt().appendChild(document.createTextNode(s))}
     appendContents(s){this.contentsElt().appendChild(document.createTextNode(s))}
+    appendMessage(params){
+	const id = this.incrLastId()
+	const message = document.createElement("message")
+	message.innerHTML = `\
+<message id="message-${id}">
+  <div      id="input-${id}">${params.role}${id} // ${params.content}</div>
+  <thinking id="thinking-${id}">thinking${id} // </thinking>
+  <content  id="content-${id}">  content${id} // </content>
+</message>`
+	this.displayElt().appendChild(message)}
     _onpub(params){
 	var used = false;
 	if(params.thinking){
@@ -31,21 +41,10 @@ const app = (new class App extends WsApp {
 	}
 	if(params.content){
 	    used = true
-	    if(params.role!='user'){	
+	    if(params.role=='user')
+		this.appendMessage(params)
+	    else
 		this.appendContents(params.content)
-		return this.bot()
-	    }
-	    const id = this.incrLastId()
-	    const displayElt = this.displayElt()
-	    const message = document.createElement("message")
-	    message.innerHTML = `\
-<message id="message-${id}">
-  <div      id="input-${id}">${params.role}${id} // </thinking>
-${params.content}</div>
-  <thinking id="thinking-${id}">thinking${id} // </thinking>
-  <content  id="content-${id}">  content${id} // </content>
-</message>`
-	    displayElt.appendChild(message)	    
 	}
 	if(params.done){
 	    used = true
