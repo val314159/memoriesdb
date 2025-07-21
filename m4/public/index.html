@@ -10,14 +10,12 @@
   </div>
   <footer class="footer" id="footer">
     <label>
-      <select id="role" onchange="app.changeRole(this)">
+      <select id="role">
 	<option value="user"  >&nbsp;&nbsp;User:</option>
 	<option value="system">System:</option>
       </select>
     </label>
-    <textarea id="input" autofocus xstyle="width:100%"
-	      class="input"
-	      xxonkeypress="app.keypress(event)"
+    <textarea id="input" class="input" autofocus
 	      placeholder="Type Input Here..."></textarea>
   </footer>
 </container>
