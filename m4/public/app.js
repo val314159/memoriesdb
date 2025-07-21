@@ -1,6 +1,5 @@
 const GEBI=x=>document.getElementById(x), print=console.log
 const loads=JSON.parse, dumps=JSON.stringify
-//print("// app.js //")
 const CH         = 'llm',
       CH_IN      = CH + '-in',
       CH_OUT     = CH + '-out',
@@ -11,14 +10,17 @@ class WsApp {
     constructor(){
 	this.lastId  = 0
 	this.uuid    = 'TEST'
-	this.session = 'LAST'}
+	this.session = 'LAST'} 
+    incrLastId()     {return ++this.lastId}
     inputElt()       {return GEBI(   "input-"+app.lastId)}
     thoughtsElt()    {return GEBI("thinking-"+app.lastId)}
     contentsElt()    {return GEBI( "content-"+app.lastId)}
     userInputElt()   {return GEBI(   "input")}
-    appendThoughts(s){this.thoughtsElt().appendChild(document.createTextNode(s))}
-    appendContents(s){this.contentsElt().appendChild(document.createTextNode(s))}
-    appendInput   (s){this.   inputElt().appendChild(document.createTextNode(s))}
+    displayElt()     {return GEBI(   "display")}
+    appendThoughts(s){this.thoughtsElt().appendChild(
+	document.createTextNode(s))}
+    appendContents(s){this.contentsElt().appendChild(
+	document.createTextNode(s))}
     ondata(data){
 	const method = data['method'],
 	      params = data['params']
