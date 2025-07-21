@@ -6,22 +6,23 @@ import funcs2 as funcs
 from session import EphemeralSessionProxy as ESP, chat_round
 class Convo(SubAgentBase):
     def __init__(_,tools=funcs.Tools, model=os.getenv('MODEL', 'llama3.1')):
-        _.tools, _.model = tools, model
-        _.child = None
+        _.tools, _.model, _.children = tools, model, dict()
         return
-    def _kill_if_possible(_):
-        if _.child:
-            print("INTERRUPT THE CURRENT PROCESS")
-            _.child = gevent.kill(_.child)
+    def _kill_if_possible(_, key):
+        if kid:= _.children.pop(key, None):
+            gevent.kill(kid)
+            print("INTERRUPT THE CURRENT PROCESS", key, kid)
             pass
         return
     def _pub(_, content, uuid, session, model='', toolset='', **kw):
+        key = ( uuid, session )
         def bg_pub():
             sess = ESP(uuid, session, funcs, _.ws(), model or _.model, _.tools)
-            _.child = chat_round(sess, content, OUT_CHANNEL)
+            chat_round(sess, content, OUT_CHANNEL)
+            del _.children[key]
             return
-        _.child = _._kill_if_possible()
-        _.child = gevent.spawn(bg_pub)
+        _._kill_if_possible(key)
+        _.children[key] = gevent.spawn(bg_pub)
         return
     pass
 if __name__ == '__main__':
