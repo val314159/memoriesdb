@@ -53,11 +53,9 @@ const app = (new class App extends WsApp {
 	    used = true
 	    this.userInputElt().focus()
 	}
-	if(!used){
+	if(!used)
 	    print('WARNING, NOT USED ' + dumps(params))
-	}
-	return this.bot()
-    }
+	return this.bot()}
     keypress(e){
 	if(e.key=='Enter' && !e.shiftKey && !e.ctrlKey){
 	    event.preventDefault()
@@ -75,18 +73,19 @@ const app = (new class App extends WsApp {
 	    event.preventDefault()
 	    print("^BRK", event.target)
 	    GEBI("input").focus()
-	    return this.bot()
-	}
-    }
+	    return this.bot()}}
     install(){
 	const inputElt = GEBI("input")
 	const role_Elt = GEBI("role")
 	inputElt.addEventListener('keypress', e=>this.keypress(e))
 	document.addEventListener('keypress', e=>this.documentKeypress(e))
-	role_Elt.addEventListener('change',   e=>this.role = e.target.value)
+	role_Elt.addEventListener('change',   e=>this.role=e.target.value)
 	this.role = role_Elt.value
-	return this
-    }
+	return this}
 } ).install().connect()
-//const sys = (content, channel)=> app.pub(content, 'system')
-//const user= (content, channel)=> app.pub(content)
+const sys = (content, channel)=> app.pub(content, 'system')
+const user= (content, channel)=> app.pub(content)
+const ls  = ()=>app.listConvos()
+const newc= ()=>app.newConvo()
+const top = ()=>app.top()
+const bot = ()=>app.bot()
