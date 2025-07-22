@@ -2,10 +2,9 @@
 from gevent import monkey as _;_.patch_all()
 import os, json, gevent, gevent.queue
 from subagent import SubAgentBase, OUT_CHANNEL
-from subagent import IN_CHANNEL
-#import funcs2 as funcs
-#from session import EphemeralSessionProxy as ESP, chat_round
-from db_sync import get_user_sessions
+from db_sync import get_user_sessions, load_simplified_convo
+
+YAML_FILE = 'chat2.yml'
 
 def recv(ws):
     raw = ws.recv()
@@ -26,35 +25,30 @@ def pub(ws, channel, content='', **kw):
                          content = content, **kw))
 
 class DbSvr(SubAgentBase):
-    #def __init__(_,tools=funcs.Tools, model=os.getenv('MODEL', 'llama3.1')):
-    #    _.tools, _.model, _.models, _.children = tools, model, dict(), dict()
-    #    return
-    #def kill_if_possible(_, key):
-    #    if kid:= _.children.pop(key, None):
-    #        gevent.kill(kid)
-    #        print("INTERRUPT THE CURRENT PROCESS", key, kid)
-    #        pass
-    #    return
-    #def _pub(_, content, uuid, session, model='', toolset='', **kw):
-    #    key = ( uuid, session )
-    #    model = model or _.models.get(key) or _.model
-    #    _.models[key] = model
-    #    _.kill_if_possible(key)
-    #    def bg_pub():
-    #        sess = ESP(uuid, session, funcs, _.ws(), model, _.tools)
-    #        chat_round(sess, content, OUT_CHANNEL)
-    #        del _.children[key]
-    #        return
-    #    _.children[key] = gevent.spawn(bg_pub)
-    #    return
-    def _pub(_, content, uuid, *args, **kw):
+    def _pub(_, content, uuid, session, *args, **kw):
         print("_PUB", content, uuid, (args, kw))
         results = []
-        for row in get_user_sessions(uuid):
-            print(row)
-            print(f"Session {row['id']}: {row['content']}")
-            results.append([str(row['id']), row['content']])
-            pass
+        if   content=='listConvos':
+            for row in get_user_sessions(uuid):
+                print(row)
+                print(f"Session {row['id']}: {row['content']}")
+                results.append([str(row['id']), row['content']])
+        elif content== 'shortHistory':
+            print("LOAD SHORT HISTORY", uuid, session)
+            for row in load_simplified_convo(session):
+                row.pop('thinking', '')
+                print("   ROW", row)
+                if row['content'] or row['done'] or row.get('images'):
+                    results.append(row)
+                else:
+                    pass
+        elif content== 'newConvo':
+            from load_convo import save_convo
+            results.append(save_convo(YAML_FILE))
+        else:
+            print("WTF IS THIS", content)
+            wtf
+            return
         pub(_.ws(), OUT_CHANNEL, content, results=results)
         return
     pass

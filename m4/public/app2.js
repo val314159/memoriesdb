@@ -62,7 +62,7 @@ const app = (new class App extends WsApp {
 		print("REFRESH WITH THE NEW CONVO", _.uuid, params.results)
 		setTimeout(()=>{
 		    print("REFRESH WITH THE NEW CONVO", _.uuid, params.results)
-		    location.reload(true)
+//		    location.reload(true)
 		},2000)
 	    },2000)
 	}

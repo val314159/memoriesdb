@@ -15,7 +15,10 @@ class WsApp {
 	    const sp = new URLSearchParams(location.search)
 	    this.uuid    = sp.get('uuid'   ) || params['uuid']
 	    this.session = sp.get('session') || params['session']
-	    print("INITIALIZE", this.uuid, this.session)
+	    print(`INITIALIZE ${this.uuid} ${this.session}`)
+	    this.displayText(`INITIALIZE ${this.uuid} ${this.session}`)
+	    this.displayText("REQUEST HISTORY")
+	    this.pub('shortHistory', this.role, DB_IN)
 	} else if (method=="pub") {
 	    //print("PUBLISH", dumps(params))
 	    this._onpub(params)
