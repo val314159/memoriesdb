@@ -70,6 +70,11 @@ const app = (new class App extends WsApp {
 	}else if(params.content=="shortHistory"){
 	    used = true
 	    print("SHIST", _.uuid, params.results)
+	    params.results.forEach(x=>{
+		print(" - X", dumps(x))
+		//const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
+		//GEBI("display").appendChild(this.createElt("li", html))
+	    })
 	}
 	if(!used)
 	    print('WARNING, NOT USED ' + dumps(params))
