@@ -86,7 +86,7 @@ const app = (new class App extends WsApp {
 	    this.appendThoughts(params.thinking)}
 	if(params.content){
 	    used = true
-	    if(params.role=='user')
+	    if(params.role=='user' || params.role=='system')
 		this.appendMessage(params)
 	    else
 		this.appendContents(params.content)}

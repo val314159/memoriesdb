@@ -277,6 +277,8 @@ def simplify_convo(convo):
             done = msg.get('done', None)
             if done is not None:
                 data['done'] = done
+            if role:= msg.get('role'):
+                data['role'] = role
             if images:= msg.get('images'):
                 data['images'] = images
             if tool_name:= msg.get('tool_name'):
