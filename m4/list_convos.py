@@ -17,6 +17,7 @@ def main():
         pass
 
     for row in get_user_sessions(uuid):
+        print(row)
         print(f"Session {row['id']}: {row['content']}")
         pass
     pass

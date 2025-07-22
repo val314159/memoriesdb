@@ -1,5 +1,4 @@
 const GEBI = x=>document.getElementById(x)
-const DB_IN = 'db-in'
 const app = (new class App extends WsApp {
     displayText(s){
 	print(s)
@@ -21,8 +20,9 @@ const app = (new class App extends WsApp {
      contentsElt(){return GEBI( "content-"+this.lastId)}
     userInputElt(){return GEBI(   "input")}
       displayElt(){return GEBI(   "display")}
-    appendThoughts(s){this.thoughtsElt().appendChild(document.createTextNode(s))}
-    appendContents(s){this.contentsElt().appendChild(document.createTextNode(s))}
+       textNode(s){return document.createTextNode(s)}
+    appendThoughts(s){this.thoughtsElt().appendChild(this.textNode(s))}
+    appendContents(s){this.contentsElt().appendChild(this.textNode(s))}
     appendMessage(params){
 	const id = this.incrLastId()
 	const message = this.createElt('message', `\
@@ -37,22 +37,52 @@ const app = (new class App extends WsApp {
 	elt.innerHTML = html
 	return elt}
     _onpub(params){
+	if(params.channel.startsWith('db-')){
+	    print(">>DB", params)
+	    return _._ondatabase(params)
+	}else if(params.channel.startsWith('llm-')){
+	    print(">>LLM", params)
+	    return _._onmessage(params)
+	}else
+	    print(">>ERR", params)}
+    _ondatabase(params){
+	var used = false;
+	if(params.content=="listConvos"){
+	    print("LIST", _.uuid, params.results)
+	    params.results.forEach(x=>{
+		print("X", x[0], " - ", x[1], '!')
+		const html = `<a href=.?convo=${x[0]}>${x[1]}</a>`
+		GEBI("display").appendChild(this.createElt("li", html))
+	    })
+	    used = true
+	}else if(params.content=="newConvo"){
+	    used = true
+	    print("NEWC", _.uuid, params.results)
+	    setTimeout(()=>{
+		print("REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+		setTimeout(()=>{
+		    print("REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+		    location.reload(true)
+		},2000)
+	    },2000)
+	}
+	if(!used)
+	    print('WARNING, NOT USED ' + dumps(params))
+    }
+    _onmessage(params){
 	var used = false;
 	if(params.thinking){
 	    used = true
-	    this.appendThoughts(params.thinking)
-	}
+	    this.appendThoughts(params.thinking)}
 	if(params.content){
 	    used = true
 	    if(params.role=='user')
 		this.appendMessage(params)
 	    else
-		this.appendContents(params.content)
-	}
+		this.appendContents(params.content)}
 	if(params.done){
 	    used = true
-	    this.userInputElt().focus()
-	}
+	    this.userInputElt().focus()}
 	if(!used)
 	    print('WARNING, NOT USED ' + dumps(params))
 	return this.bot()}
@@ -65,9 +95,7 @@ const app = (new class App extends WsApp {
 	    if(!input)return
 	    console.log("INPUT "+input)
 	    this.pub(input, this.role)
-	    return this.bot()
-	}
-    }
+	    return this.bot()}}
     documentKeypress(event){
 	if(event.key=='\\' && event.ctrlKey){
 	    event.preventDefault()
@@ -87,5 +115,4 @@ const sys = (content, channel)=> app.pub(content, 'system')
 const user= (content, channel)=> app.pub(content)
 const ls  = ()=>app.listConvos()
 const newc= ()=>app.newConvo()
-//const top = ()=>app.top()
-//const bot = ()=>app.bot()
+window._ = app

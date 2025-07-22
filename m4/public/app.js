@@ -2,22 +2,25 @@ const loads=JSON.parse, dumps=JSON.stringify, print=console.log
 const CH         = 'llm',
       CH_OUT     = CH + '-out',
       CH_IN      = CH + '-in',
+      DB_IN      =    'db-in',
       WS_BASE    = 'ws://localhost:5002/ws?c=',
       WS_TIMEOUT =  5 * 1000,
       WS_TIMEOUT2= 15 * 1000
 class WsApp {
-    constructor(){
-	this.lastId  = 0
-	this.uuid    = 'TEST'
-	this.session = 'LAST'}
+    constructor(){ this.uuid = this.session = this.lastId = 0 }
     ondata(data){
 	const method = data['method'],
 	      params = data['params']
 	if (method=="initialize") {
-	    this.uuid    = params['uuid']
-	    this.session = params['session']
+	    print("LOC", location.search)
+	    const sp = new URLSearchParams(location.search)
+	    this.uuid    ||= sp.get('uuid')
+	    this.session ||= sp.get('convo')
+	    this.uuid    ||= params['uuid']
+	    this.session ||= params['session']
 	    print("INITIALIZE", this.uuid, this.session)
 	} else if (method=="pub") {
+	    print("PUBLISH", dumps(params))
 	    this._onpub(params)
 	} else {
 	    alert("BAD METHOD: "+ method)}}
@@ -48,7 +51,7 @@ class WsApp {
 	    this.connect()
 	}, WS_TIMEOUT) }
     connect(){
-	const uri = WS_BASE + CH_OUT
+	const uri = WS_BASE + CH_OUT + '&c=db-out'
 	print(`Connecting WebSocket ${uri}...`)
 	this.ws = new WebSocket(uri)
 	this.resetConnectionTimeout()
