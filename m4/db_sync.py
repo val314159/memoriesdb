@@ -73,7 +73,7 @@ def get_edges_by_source(edge_id: str) -> Optional[Dict]:
         pass
     pass
 
-def get_memories_by_target(memory_id: str):
+def get_memories_by_target(memory_id: str, suffix: str=''):
     conn = psycopg.connect(DSN, row_factory=dict_row)
     cursor = conn.cursor()
     query = """
@@ -83,7 +83,7 @@ def get_memories_by_target(memory_id: str):
     WHERE id IN (
       SELECT source_id FROM memory_edges WHERE target_id = %s
     )
-    """
+    """ + suffix
     cursor.execute(query, (memory_id,))
     for row in cursor:
         row.update(row.pop('_metadata'))
@@ -260,8 +260,8 @@ def check_valid_uuid(uuid):
         raise SystemExit(4)
 
 
-def load_simplified_convo(convo_id):
-    return simplify_convo( load_convo(convo_id) )
+def load_simplified_convo(convo_id, reverse=False):
+    return simplify_convo(load_convo(convo_id, reverse))
 
 
 def simplify_convo(convo):
@@ -294,9 +294,10 @@ def simplify_convo(convo):
             NO_WAY
 
 
-def load_convo(suid):
+def load_convo(suid, reverse=False):
     session = get_memory_by_id(suid)
-    return get_memories_by_target( session['id'] )
+    suffix = ' ORDER BY ID DESC ' if reverse else ''
+    return get_memories_by_target( session['id'], suffix )
         
 
 def store_convo(history, title):

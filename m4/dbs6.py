@@ -35,13 +35,17 @@ class DbSvr(SubAgentBase):
                 results.append([str(row['id']), row['content']])
         elif content== 'shortHistory':
             print("LOAD SHORT HISTORY", uuid, session)
-            for row in load_simplified_convo(session):
+            for row in load_simplified_convo(session, True):
                 row.pop('thinking', '')
                 print("   ROW", row)
                 if row['content'] or row['done'] or row.get('images'):
                     results.append(row)
-                else:
+                    if len(row) >= 16:
+                        pub(_.ws(), OUT_CHANNEL, content, results=results)
+                        results = []
+                        pass
                     pass
+                pass
         elif content== 'newConvo':
             from load_convo import save_convo
             results.append(str(save_convo(YAML_FILE)))

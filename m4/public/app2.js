@@ -70,10 +70,20 @@ const app = (new class App extends WsApp {
 	}else if(params.content=="shortHistory"){
 	    used = true
 	    print("SHIST", _.uuid, params.results)
+	    var buffer = []
+	    var lastRole = 'n/a'
+	    var displayElt = GEBI("display")
+	    const display = x=>displayElt.prepend(this.createElt(
+		"div", `<div id="${x.role}" class="${x.role}">`+
+		    `${x.role} :: ${buffer.join('/')} !! </div>`))
 	    params.results.forEach(x=>{
 		print(" - X", dumps(x))
-		//const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
-		//GEBI("display").appendChild(this.createElt("li", html))
+		buffer.push(x.content)
+		if (lastRole!=x.role){
+		    display(x)
+		    buffer = []
+		}
+		lastRole = x.role
 	    })
 	}
 	if(!used)
