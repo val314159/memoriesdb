@@ -48,23 +48,28 @@ const app = (new class App extends WsApp {
     _ondatabase(params){
 	var used = false;
 	if(params.content=="listConvos"){
+	    used = true
 	    print("LIST", _.uuid, params.results)
 	    params.results.forEach(x=>{
 		print("X", x[0], " - ", x[1], '!')
 		const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
 		GEBI("display").appendChild(this.createElt("li", html))
 	    })
-	    used = true
 	}else if(params.content=="newConvo"){
 	    used = true
 	    print("NEWC", _.uuid, params.results)
 	    setTimeout(()=>{
-		print("REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+		location = '.'
+		/*print("1REFRESH WITH THE NEW CONVO", _.uuid, params.results)
 		setTimeout(()=>{
-		    print("REFRESH WITH THE NEW CONVO", _.uuid, params.results)
-//		    location.reload(true)
-		},2000)
-	    },2000)
+		    print("2REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+		    location = '.'
+		    print("2REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+		},1000)*/
+	    },1500)
+	}else if(params.content=="shortHistory"){
+	    used = true
+	    print("SHIST", _.uuid, params.results)
 	}
 	if(!used)
 	    print('WARNING, NOT USED ' + dumps(params))
