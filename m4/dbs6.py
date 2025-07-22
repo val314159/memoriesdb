@@ -44,7 +44,7 @@ class DbSvr(SubAgentBase):
                     pass
         elif content== 'newConvo':
             from load_convo import save_convo
-            results.append(save_convo(YAML_FILE))
+            results.append(str(save_convo(YAML_FILE)))
         else:
             print("WTF IS THIS", content)
             wtf

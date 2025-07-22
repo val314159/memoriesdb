@@ -13,7 +13,8 @@ def save_convo(filename):
     else:
         print("BAD FORMAT")
         raise SystemExit(1)    
-    return db_sync.store_convo(history, new_title), new_title
+    _id = db_sync.store_convo(history, new_title)
+    return str(_id), new_title
 def main():
     filename = sys.argv[1]
     convo_id, new_title = save_convo(filename)
