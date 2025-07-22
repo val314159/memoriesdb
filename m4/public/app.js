@@ -12,15 +12,12 @@ class WsApp {
 	const method = data['method'],
 	      params = data['params']
 	if (method=="initialize") {
-	    print("LOC", location.search)
 	    const sp = new URLSearchParams(location.search)
-	    this.uuid    ||= sp.get('uuid')
-	    this.session ||= sp.get('convo')
-	    this.uuid    ||= params['uuid']
-	    this.session ||= params['session']
+	    this.uuid    = sp.get('uuid'   ) || params['uuid']
+	    this.session = sp.get('session') || params['session']
 	    print("INITIALIZE", this.uuid, this.session)
 	} else if (method=="pub") {
-	    print("PUBLISH", dumps(params))
+	    //print("PUBLISH", dumps(params))
 	    this._onpub(params)
 	} else {
 	    alert("BAD METHOD: "+ method)}}

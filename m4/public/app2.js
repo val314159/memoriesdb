@@ -51,7 +51,7 @@ const app = (new class App extends WsApp {
 	    print("LIST", _.uuid, params.results)
 	    params.results.forEach(x=>{
 		print("X", x[0], " - ", x[1], '!')
-		const html = `<a href=.?convo=${x[0]}>${x[1]}</a>`
+		const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
 		GEBI("display").appendChild(this.createElt("li", html))
 	    })
 	    used = true
