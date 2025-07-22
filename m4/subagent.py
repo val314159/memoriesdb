@@ -1,11 +1,9 @@
 import os, json, websocket
 
-
+WS_BASE = "ws://localhost:5002/ws"
 NAME = os.getenv('NAME','llm')
 IN_CHANNEL  = NAME+'-in'
 OUT_CHANNEL = NAME+'-out'
-WS_BASE = "ws://localhost:5002/ws"
-
 
 class SubAgentBase:
 

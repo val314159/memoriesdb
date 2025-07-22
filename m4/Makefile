@@ -59,6 +59,7 @@ pgvector-wait:
 	@echo "\nPostgreSQL is ready!"
 
 clean::
+	rm -fr *.out *.err *.log
 	@find .	-name \*~ -o -name .\*~ | xargs rm -fr
 
 realclean:: clean
