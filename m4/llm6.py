@@ -14,7 +14,8 @@ class Convo(SubAgentBase):
             print("INTERRUPT THE CURRENT PROCESS", key, kid)
             pass
         return
-    def _pub(_, content, uuid, session, model='', toolset='', role='user', **kw):
+    def _pub(_, content, uuid, session, model='', toolset='',
+             role='user', channel=OUT_CHANNEL, **kw):
         print("XXXXXXXXXXXXXXX KW", kw)
         print("XXXXXXXXXXXXXXX KW", kw)
         print("XXXXXXXXXXXXXXX KW", kw)
