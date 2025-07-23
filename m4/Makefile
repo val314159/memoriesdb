@@ -19,10 +19,10 @@ all:: pgvector-restart honcho
 dev:: reset-db honcho
 
 reset-db:
+	make -C modelfiles
 	bash restart_db.sh
 
 honcho::
-	make -C modelfiles
 	uv run honcho start
 
 chat::
