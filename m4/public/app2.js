@@ -52,8 +52,8 @@ const app = (new class App extends WsApp {
 	    print("LIST", _.uuid, params.results)
 	    params.results.forEach(x=>{
 		print("X", x[0], " - ", x[1], '!')
-		const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
-		GEBI("display").appendChild(this.createElt("li", html))
+		//const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
+		//GEBI("display").appendChild(this.createElt("li", html))
 	    })
 	}else if(params.content=="newConvo"){
 	    used = true
@@ -73,18 +73,27 @@ const app = (new class App extends WsApp {
 	    var buffer = []
 	    var lastRole = 'n/a'
 	    var displayElt = GEBI("display")
-	    const display = x=>displayElt.prepend(this.createElt(
-		"div", `<div id="${x.role}" class="${x.role}">`+
-		    `${x.role} :: ${buffer.join('/')} !! </div>`))
-	    params.results.forEach(x=>{
-		print(" - X", dumps(x))
-		buffer.push(x.content)
-		if (lastRole!=x.role){
-		    display(x)
-		    buffer = []
+	    const showMsg = (lastRole)=>{
+		if(buffer.length){
+		    const lastContent = buffer.join('')
+		    const html = lastRole+': '+lastContent
+		    const elt = this.createElt("li", html)
+		    elt.class = "user"
+		    displayElt.prepend(elt)
 		}
-		lastRole = x.role
+	    }
+	    params.results.forEach(x=>{
+		//print(" - X", dumps(x), buffer)
+		if(lastRole != x.role){
+		    // x is a new deal, so dump the old deal
+		    showMsg(lastRole)
+		    // and reset stuff
+		    lastRole = x.role
+		    buffer.length = 0
+		}
+		buffer.unshift(x.content)
 	    })
+	    showMsg(lastRole)
 	}
 	if(!used)
 	    print('WARNING, NOT USED ' + dumps(params))
