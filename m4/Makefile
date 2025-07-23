@@ -68,3 +68,5 @@ realclean:: clean
 		-name \#\*\# -o -name .\#\* | xargs rm -fr
 	@rm -fr uv.lock
 	@tree -I .git -a
+maybe::
+	bash -c "if docker ps | grep pgvector; then make dev; else make pgvector-restart; fi"

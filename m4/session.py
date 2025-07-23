@@ -26,9 +26,9 @@ def call_tool(funcs, tool_name, **kw):
         return getattr(funcs, tool_name)(**kw)
     except:
         content = traceback.format_exc()
-        print("\\ERROR", '*'*40)
+        print("\\TOOL ERROR", '*'*40)
         print(content)
-        print( "/ERROR", '*'*40)
+        print( "/TOOL ERROR", '*'*40)
         return content
     pass
 class EphemeralSessionProxy:
@@ -99,7 +99,22 @@ def chat_round(_, content='', channel='', role='user', auto_tool=True):
     if content: _append_user(_, content=content, role=role)
     tool_calls = [] # keep track of calls we need to do
     while llm_messages:= ollama_chat(_):
-        for msg in llm_messages:
+        print("LLM MESSAGES", llm_messages_)
+        def read_messages():
+            n = -1
+            try:
+                for n, msg in enumerate(llm_messages):
+                    yield msg
+            except:
+                import traceback
+                print("\\LLM ERROR", '*'*40)
+                traceback.print_exc()
+                print( "/LLM ERROR", '*'*40)
+                print( "=LLM ERROR", n, n, n, n, n, n, n)
+                pass
+            pass
+        #for msg in llm_messages:
+        for msg in read_messages():
             funcalls = list( _filter_tool_calls(_, msg.done, msg.message) )
             tool_calls.extend( funcalls )
             _respond_to_user(_, msg.done, msg.message,
