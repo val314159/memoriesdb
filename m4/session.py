@@ -99,7 +99,7 @@ def chat_round(_, content='', channel='', role='user', auto_tool=True):
     if content: _append_user(_, content=content, role=role)
     tool_calls = [] # keep track of calls we need to do
     while llm_messages:= ollama_chat(_):
-        print("LLM MESSAGES", llm_messages_)
+        print("LLM MESSAGES", llm_messages)
         def read_messages():
             n = -1
             try:
