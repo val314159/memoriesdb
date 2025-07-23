@@ -16,7 +16,8 @@ P=postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB
 
 all:: pgvector-restart honcho
 
-dev:: reset-db honcho
+dev:: setup honcho
+xdev:: reset-db honcho
 
 reset-db:
 	make -C modelfiles
@@ -68,5 +69,5 @@ realclean:: clean
 		-name \#\*\# -o -name .\#\* | xargs rm -fr
 	@rm -fr uv.lock
 	@tree -I .git -a
-maybe::
-	bash -c "if docker ps | grep pgvector; then make dev; else make pgvector-restart; fi"
+setup::
+	if docker ps | grep pgvector; then make reset-db; else make pgvector-restart; fi
