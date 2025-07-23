@@ -27,13 +27,13 @@ const app = (new class App extends WsApp {
 	const id = this.incrLastId()
 	const message = this.createElt('message', `\
 <message id="message-${id}">
-  <div      id="input-${id}">${params.role}${id} // ${params.content}</div>
+  <user     id="input-${id}">${params.role}${id} // ${params.content}</user>
   <thinking id="thinking-${id}">thinking${id} // </thinking>
   <content  id="content-${id}">  content${id} // </content>
 </message>`)
 	this.displayElt().appendChild(message)}
     createElt(tag, html){
-	const elt = document.createElement('message')
+	const elt = document.createElement(tag)
 	elt.innerHTML = html
 	return elt}
     _onpub(params){
@@ -72,22 +72,22 @@ const app = (new class App extends WsApp {
 	    print("SHIST", _.uuid, params.results)
 	    var buffer = []
 	    var lastRole = 'n/a'
-	    var displayElt = GEBI("display")
 	    const showMsg = (lastRole)=>{
 		if(buffer.length){
 		    const lastContent = buffer.join('')
 		    const html = lastRole+': '+lastContent
-		    const elt = this.createElt("li", html)
-		    elt.class = "user"
-		    displayElt.prepend(elt)
+		    print("LR", lastRole)
+		    const elt = this.createElt(lastRole, html)
+		    //print("XELT", elt)
+		    //const elt = this.createElt("li", html)
+		    //print("ELT", elt)
+		    //elt.className = lastRole
+		    GEBI("display").prepend(elt)
 		}
 	    }
 	    params.results.forEach(x=>{
-		//print(" - X", dumps(x), buffer)
 		if(lastRole != x.role){
-		    // x is a new deal, so dump the old deal
 		    showMsg(lastRole)
-		    // and reset stuff
 		    lastRole = x.role
 		    buffer.length = 0
 		}

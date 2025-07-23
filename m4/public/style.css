@@ -4,13 +4,20 @@ display {
 message {
     display: block;
     border: 1px dashed blue;
+}
+user {
+    display: block;
     background: lightblue;
-} 
+}
+system {
+    display: block;
+    background: pink;
+}
 thinking {
     display: block;
     background: yellow;
 }
-content {
+assistant, content {
     display: block;
     background: lightgreen;
 }
