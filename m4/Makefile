@@ -22,6 +22,7 @@ reset-db:
 	bash restart_db.sh
 
 honcho::
+	make -C modelfiles
 	uv run honcho start
 
 chat::

@@ -3,7 +3,9 @@
 all: load list
 
 load:
-	ollama create default -f default.Modelfile
+	ollama pull all-minilm # embedding model
+	ollama create default -f default.Modelfile	
+	ollama create  vision -f  vision.Modelfile
 	ollama create   other -f   other.Modelfile
 
 list:
