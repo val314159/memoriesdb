@@ -1,5 +1,4 @@
-FROM qwen3:14b
-#FROM llama3.1
+FROM llama3.1
 
 PARAMETER seed 42
 
@@ -9,7 +8,7 @@ PARAMETER top_k 1
 PARAMETER temperature 0
 #PARAMETER temperature 1
 
-#PARAMETER num_predict 100
+PARAMETER num_predict 1000
 
 # sets the context window size to 24k
 PARAMETER num_ctx 24576
