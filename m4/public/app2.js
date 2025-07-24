@@ -37,12 +37,20 @@ const app = (new class App extends WsApp {
     appendMessage(params){
 	const role = params.role
 	const id = ++this.lastId
-	const message = this.createElt('message', `\
-  <${role}   id="input-${    id}">${params.role}: ${params.content}</${role}>
-  <thinking  id="thinking-${ id}"></thinking>
-  <assistant id="assistant-${id}"></assistant>
-`)
-	GEBI("display").appendChild(message)}
+
+	const e1 = document.createElement(role)
+	e1.id =     "input-" + id
+	e1.innerHTML = `${params.role}: ${params.content}`
+	GEBI("display").appendChild(e1)
+
+	const e2 = document.createElement("thinking")
+	e2.id =  "thinking-" + id
+	GEBI("display").appendChild(e2)
+
+	const e3 = document.createElement("assistant")
+	e3.id = "assistant-" + id
+	GEBI("display").appendChild(e3)
+    }
 
     _onpub(params){
 	if(params.channel.startsWith('db-')){
