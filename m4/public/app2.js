@@ -13,9 +13,11 @@ const app = (new class App extends WsApp {
 
     textNode(s){return document.createTextNode(s)}
 
-    createElt(tag, html){
+    createElt(tag, html, id){
+	if(!tag) return
 	const elt = document.createElement(tag)
-	elt.innerHTML = html
+	elt.id = id
+	elt.innerHTML = tag + ': ' + html
 	return elt}
 
     // ACTION FUNCS
@@ -30,42 +32,54 @@ const app = (new class App extends WsApp {
 	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
 	this.pub('newConvo', 'user', DB_IN)}
 
-    // apppend funcs?
+    // prepend / apppend funcs
 
-    appendThoughts(s){GEBI( "thinking-"+this.lastId).append(this.textNode(s))}
-    appendContents(s){GEBI("assistant-"+this.lastId).append(this.textNode(s))}
+    prependMsg(role, content, id){
+	const elt = this.createElt(role, content, id)
+	if (elt) GEBI("display").prepend(elt)}
+
+    appendMsg(role, content, id){
+	const elt = this.createElt(role, content, id)
+	if (elt) GEBI("display").append(elt)}
+    
     appendMessage(params){
-	const role = params.role
 	const id = ++this.lastId
+	this.appendMsg(params.role, params.content)
+	this.appendMsg(  "thinking", '',  'thinking-'+id )
+	this.appendMsg( "assistant", '', 'assistant-'+id )}
 
-	const e1 = document.createElement(role)
-	e1.id =     "input-" + id
-	e1.innerHTML = `${params.role}: ${params.content}`
-	GEBI("display").appendChild(e1)
+    appendThoughts(s){
+	GEBI( "thinking-"+this.lastId).append(this.textNode(s))}
 
-	const e2 = document.createElement("thinking")
-	e2.id =  "thinking-" + id
-	GEBI("display").appendChild(e2)
+    appendContents(s){
+	GEBI("assistant-"+this.lastId).append(this.textNode(s))}
 
-	const e3 = document.createElement("assistant")
-	e3.id = "assistant-" + id
-	GEBI("display").appendChild(e3)
-    }
+    // callbacks
+    
+    on_initialize(params){ 
+	const sp = new URLSearchParams(location.search)
+	this.uuid    = sp.get('uuid'   ) || params['uuid']
+	this.session = sp.get('session') || params['session']
+	print(`INITIALIZE ${this.uuid} ${this.session}`)
+	this.displayText(`INITIALIZE ${this.uuid} ${this.session}`)
+	this.displayText("REQUEST HISTORY")
+	this.pub('shortHistory', this.role, DB_IN)}
+    
+    on_pub(params){
+	const channel = params.channel
+	if      (channel.startsWith( 'db-')) _.on_db_message(params)
+	else if (channel.startsWith('llm-')) _.on_llm_message(params)
+	else                                print(">>PUB ERR", params)}
 
-    _onpub(params){
-	if(params.channel.startsWith('db-')){
-	    print(">>DB", params)
-	    const fn = this['db_'+params.content]
-	    if(fn)
-		return fn.bind(this)(params)
-	    print('WARNING, NOT FOUND ' + dumps(params))
-	}else if(params.channel.startsWith('llm-')){
-	    print(">>LLM", params)
-	    return _._onmessage(params)
-	}else
-	    print(">>ERR", params)}
-
-    _onmessage(params){
+    on_db_message(params){
+	print(">>DB", params)
+	const fn = this['db_'+params.content]
+	if(fn)
+	    return fn.bind(this)(params)
+	print('WARNING, NOT FOUND ' + dumps(params))}
+    
+    on_llm_message(params){
+	print(">>LLM", params)
 	var used = false;
 	if(params.thinking){
 	    used = true
@@ -105,16 +119,16 @@ const app = (new class App extends WsApp {
 
     db_shortHistory(params){
 	print("SHIST", _.uuid, params.results)
-	var buffer = [], lastRole = 'n/a'
+	var buffer = [], lastRole = ''
 	params.results.forEach(x=>{
 	    if(lastRole != x.role){
-		this.showMsg(lastRole, buffer)
+		this.prependMsg(lastRole, buffer.join(''))
 		lastRole = x.role
 		buffer.length = 0
 	    }
 	    buffer.unshift(x.content)
 	})
-	this.showMsg(lastRole, buffer)}
+	this.prependMsg(lastRole, buffer.join(''))}
 
     db_newConvo(params){
 	print("NEWC", _.uuid, params.results)
@@ -127,13 +141,6 @@ const app = (new class App extends WsApp {
 		print("2REFRESH WITH THE NEW CONVO", _.uuid, params.results)
 	    },1000)
 	},1500)}
-
-    showMsg(lastRole, buffer){
-	if(buffer.length === 0)
-	    return
-	const html = lastRole+': ' + buffer.join('')
-	const elt = this.createElt(lastRole, html)
-	return GEBI("display").prepend( elt )}
 
     keypress(e){
 	if(e.key=='Enter' && !e.shiftKey && !e.ctrlKey){

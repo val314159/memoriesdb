@@ -8,22 +8,6 @@ const CH         = 'llm',
       WS_TIMEOUT2= 15 * 1000
 class WsApp {
     constructor(){ this.uuid = this.session = this.lastId = 0 }
-    ondata(data){
-	const method = data['method'],
-	      params = data['params']
-	if (method=="initialize") {
-	    const sp = new URLSearchParams(location.search)
-	    this.uuid    = sp.get('uuid'   ) || params['uuid']
-	    this.session = sp.get('session') || params['session']
-	    print(`INITIALIZE ${this.uuid} ${this.session}`)
-	    this.displayText(`INITIALIZE ${this.uuid} ${this.session}`)
-	    this.displayText("REQUEST HISTORY")
-	    this.pub('shortHistory', this.role, DB_IN)
-	} else if (method=="pub") {
-	    //print("PUBLISH", dumps(params))
-	    this._onpub(params)
-	} else {
-	    alert("BAD METHOD: "+ method)}}
     pub(content, role, channel){
 	this.ws.send( channel ||= CH_IN )
 	print       ( dumps( { method: 'pub',
@@ -60,9 +44,15 @@ class WsApp {
 	    //this.resetInactivityTimeout()
 	    clearTimeout(this.connectionTimeout) }
 	this.ws.onmessage =e=>{	
-	    //print("WEBSOCKET MESG", e)
-	    //this.resetInactivityTimeout()
-	    this.ondata(loads(e.data)) }
+	    const data = loads(e.data)
+	    const method = data.method,
+		  params = data.params
+	    if (method=="initialize")
+		this.on_initialize(params)
+	    else if (method=="pub")
+		this.on_pub(params)
+	    else
+		alert("BAD METHOD: "+ method)}
 	this.ws. onclose  =e=>{
 	    print("WEBSOCKET CLOS", e)
 	    //setTimeout(this.connect, WS_TIMEOUT)
