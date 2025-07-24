@@ -7,6 +7,7 @@ load:
 	ollama create default -f default.Modelfile	
 	ollama create  vision -f  vision.Modelfile
 	ollama create   other -f   other.Modelfile
+	ollama create    test -f    test.Modelfile
 
 list:
 	ollama list
