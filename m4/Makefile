@@ -69,3 +69,6 @@ realclean:: clean
 	@tree -I .git -a
 setup::
 	if docker ps | grep pgvector; then make reset-db; else make pgvector-restart; fi
+
+vtoken:
+	ssh -i ~/.ssh/id_vastai $$(vastai ssh-url $$(vastai show instances -q)) 'echo $$OPEN_BUTTON_TOKEN'
