@@ -109,7 +109,6 @@ const app = (new class App extends WsApp {
 	GEBI("input").focus()}
 
     db_listConvos(params){
-	used = true
 	print("LIST", _.uuid, params.results)
 	params.results.forEach(x=>{
 	    print("X", x[0], " - ", x[1], '!')
