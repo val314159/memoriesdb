@@ -13,13 +13,15 @@ V = --rm --env-file=.env -p${PG_PORT}:5432 \
 
 P=postgres://$$POSTGRES_USER:$$POSTGRES_PASSWORD@localhost:5432/$$POSTGRES_DB
 
-all:: dev
+all:: setup modelfiles honcho
 
-dev:: setup honcho
+dev:: reset-db honcho
 
 reset-db:
-	make -C modelfiles
 	bash restart_db.sh
+
+modelfiles::
+	make -C modelfiles
 
 honcho::
 	uv run honcho start

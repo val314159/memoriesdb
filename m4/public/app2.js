@@ -1,120 +1,132 @@
 const GEBI = x=>document.getElementById(x)
 const app = (new class App extends WsApp {
+
+    // MISC STATIC FUNCS
+
     displayText(s){
 	print(s)
-	GEBI("display").appendChild(document.createTextNode(s))
-	GEBI("display").appendChild(document.createElement('br'))}
-    listConvos(){
-	this.displayText("LIST CONVOS: " + this.uuid)
-	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
-	this.pub('listConvos', 'user', DB_IN)}
-    newConvo(){
-	this.displayText("NEW CONVO: " + this.uuid)
-	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
-	this.pub('newConvo', 'user', DB_IN)}
+	GEBI("display").append(document.createTextNode(s))
+	GEBI("display").append(document.createElement('br'))}
+
     top(){window.scrollTo(0, 0)}
     bot(){window.scrollTo(0, document.body.scrollHeight)}
-      incrLastId(){return ++this.lastId}
-        inputElt(){return GEBI(   "input-"+this.lastId)}
-     thoughtsElt(){return GEBI("thinking-"+this.lastId)}
-     contentsElt(){return GEBI( "content-"+this.lastId)}
-    userInputElt(){return GEBI(   "input")}
-      displayElt(){return GEBI(   "display")}
-       textNode(s){return document.createTextNode(s)}
-    appendThoughts(s){this.thoughtsElt().appendChild(this.textNode(s))}
-    appendContents(s){this.contentsElt().appendChild(this.textNode(s))}
-    appendMessage(params){
-	const id = this.incrLastId()
-	const message = this.createElt('message', `\
-<message id="message-${id}">
-  <user     id="input-${id}">${params.role}${id} // ${params.content}</user>
-  <thinking id="thinking-${id}">thinking${id} // </thinking>
-  <content  id="content-${id}">  content${id} // </content>
-</message>`)
-	this.displayElt().appendChild(message)}
+
+    textNode(s){return document.createTextNode(s)}
+
     createElt(tag, html){
 	const elt = document.createElement(tag)
 	elt.innerHTML = html
 	return elt}
+
+    // ACTION FUNCS
+
+    listConvos(){
+	this.displayText("LIST CONVOS: " + this.uuid)
+	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
+	this.pub('listConvos', 'user', DB_IN)}
+
+    newConvo(){
+	this.displayText("NEW CONVO: " + this.uuid)
+	this.displayText("PUBLISH A MESSAGE TO A MICROSERVICE?")
+	this.pub('newConvo', 'user', DB_IN)}
+
+    // apppend funcs?
+
+    appendThoughts(s){GEBI( "thinking-"+this.lastId).append(this.textNode(s))}
+    appendContents(s){GEBI("assistant-"+this.lastId).append(this.textNode(s))}
+    appendMessage(params){
+	const role = params.role
+	const id = ++this.lastId
+	const message = this.createElt('message', `\
+  <${role}   id="input-${    id}">${params.role}: ${params.content}</${role}>
+  <thinking  id="thinking-${ id}"></thinking>
+  <assistant id="assistant-${id}"></assistant>
+`)
+	GEBI("display").appendChild(message)}
+
     _onpub(params){
 	if(params.channel.startsWith('db-')){
 	    print(">>DB", params)
-	    return _._ondatabase(params)
+	    const fn = this['db_'+params.content]
+	    if(fn)
+		return fn.bind(this)(params)
+	    print('WARNING, NOT FOUND ' + dumps(params))
 	}else if(params.channel.startsWith('llm-')){
 	    print(">>LLM", params)
 	    return _._onmessage(params)
 	}else
 	    print(">>ERR", params)}
-    _ondatabase(params){
-	var used = false;
-	if(params.content=="listConvos"){
-	    used = true
-	    print("LIST", _.uuid, params.results)
-	    params.results.forEach(x=>{
-		print("X", x[0], " - ", x[1], '!')
-		//const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
-		//GEBI("display").appendChild(this.createElt("li", html))
-	    })
-	}else if(params.content=="newConvo"){
-	    used = true
-	    print("NEWC", _.uuid, params.results)
-	    setTimeout(()=>{
-		location = '.'
-		/*print("1REFRESH WITH THE NEW CONVO", _.uuid, params.results)
-		setTimeout(()=>{
-		    print("2REFRESH WITH THE NEW CONVO", _.uuid, params.results)
-		    location = '.'
-		    print("2REFRESH WITH THE NEW CONVO", _.uuid, params.results)
-		},1000)*/
-	    },1500)
-	}else if(params.content=="shortHistory"){
-	    used = true
-	    print("SHIST", _.uuid, params.results)
-	    var buffer = []
-	    var lastRole = 'n/a'
-	    const showMsg = (lastRole)=>{
-		if(buffer.length){
-		    const lastContent = buffer.join('')
-		    const html = lastRole+': '+lastContent
-		    print("LR", lastRole)
-		    const elt = this.createElt(lastRole, html)
-		    //print("XELT", elt)
-		    //const elt = this.createElt("li", html)
-		    //print("ELT", elt)
-		    //elt.className = lastRole
-		    GEBI("display").prepend(elt)
-		}
-	    }
-	    params.results.forEach(x=>{
-		if(lastRole != x.role){
-		    showMsg(lastRole)
-		    lastRole = x.role
-		    buffer.length = 0
-		}
-		buffer.unshift(x.content)
-	    })
-	    showMsg(lastRole)
-	}
-	if(!used)
-	    print('WARNING, NOT USED ' + dumps(params))
-    }
+
     _onmessage(params){
 	var used = false;
 	if(params.thinking){
 	    used = true
-	    this.appendThoughts(params.thinking)}
+	    this.llm_thinking(params)}
 	if(params.content){
 	    used = true
-	    if(params.role=='user' || params.role=='system')
-		this.appendMessage(params)
-	    else
-		this.appendContents(params.content)}
+	    this.llm_speaking(params)}
 	if(params.done){
 	    used = true
-	    this.userInputElt().focus()}
+	    this.llm_finished(params)}
 	if(!used)
 	    print('WARNING, NOT USED ' + dumps(params))
 	return this.bot()}
+
+    llm_thinking(params){
+	this.appendThoughts(params.thinking)}
+
+    llm_speaking(params){
+	if(params.role=='user' || params.role=='system')
+	    this.appendMessage(params)
+	else if(params.role=='assistant')
+	    this.appendContents(params.content)
+	else
+	    print("WARNING: WHATS THE ROLE HERE:", params)}
+
+    llm_finished(params){
+	GEBI("input").focus()}
+
+    db_listConvos(params){
+	used = true
+	print("LIST", _.uuid, params.results)
+	params.results.forEach(x=>{
+	    print("X", x[0], " - ", x[1], '!')
+	    const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
+	    GEBI("display").append(this.createElt("li", html))
+	})}
+
+    db_shortHistory(params){
+	print("SHIST", _.uuid, params.results)
+	var buffer = [], lastRole = 'n/a'
+	params.results.forEach(x=>{
+	    if(lastRole != x.role){
+		this.showMsg(lastRole, buffer)
+		lastRole = x.role
+		buffer.length = 0
+	    }
+	    buffer.unshift(x.content)
+	})
+	this.showMsg(lastRole, buffer)}
+
+    db_newConvo(params){
+	print("NEWC", _.uuid, params.results)
+    	setTimeout(()=>{
+	    location = '.'
+	    print("1REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+	    setTimeout(()=>{
+		print("2REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+		location = '.'
+		print("2REFRESH WITH THE NEW CONVO", _.uuid, params.results)
+	    },1000)
+	},1500)}
+
+    showMsg(lastRole, buffer){
+	if(buffer.length === 0)
+	    return
+	const html = lastRole+': ' + buffer.join('')
+	const elt = this.createElt(lastRole, html)
+	return GEBI("display").prepend( elt )}
+
     keypress(e){
 	if(e.key=='Enter' && !e.shiftKey && !e.ctrlKey){
 	    event.preventDefault()
@@ -125,12 +137,14 @@ const app = (new class App extends WsApp {
 	    console.log("INPUT "+input)
 	    this.pub(input, this.role)
 	    return this.bot()}}
+
     documentKeypress(event){
 	if(event.key=='\\' && event.ctrlKey){
 	    event.preventDefault()
 	    print("^BRK", event.target)
 	    GEBI("input").focus()
 	    return this.bot()}}
+
     install(){
 	const inputElt = GEBI("input")
 	const role_Elt = GEBI("role")
@@ -139,9 +153,12 @@ const app = (new class App extends WsApp {
 	role_Elt.addEventListener('change',   e=>this.role=e.target.value)
 	this.role = role_Elt.value
 	return this}
+
 } ).install().connect()
-const sys = (content, channel)=> app.pub(content, 'system')
-const user= (content, channel)=> app.pub(content)
-const ls  = ()=>app.listConvos()
-const newc= ()=>app.newConvo()
+const sys  = (content, channel)=> app.pub(content, 'system')
+const user = (content, channel)=> app.pub(content)
+const ls   = ()=>app.listConvos()
+const newc = ()=>app.newConvo()
+const go_top=()=>app.top()
+const go_bot=()=>app.bot()
 window._ = app

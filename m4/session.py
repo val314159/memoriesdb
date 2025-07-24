@@ -113,7 +113,6 @@ def chat_round(_, content='', channel='', role='user', auto_tool=True):
                 print( "=LLM ERROR", n, n, n, n, n, n, n)
                 pass
             pass
-        #for msg in llm_messages:
         for msg in read_messages():
             funcalls = list( _filter_tool_calls(_, msg.done, msg.message) )
             tool_calls.extend( funcalls )

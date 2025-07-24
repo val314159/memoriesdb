@@ -1,9 +1,10 @@
 display {
     display: block;
+    border: 10px dashed red;
 }
 message {
     display: block;
-    border: 1px dashed blue;
+    border: 10px dashed blue;
 }
 user {
     display: block;
@@ -17,13 +18,14 @@ thinking {
     display: block;
     background: yellow;
 }
-assistant, content {
+assistant {
     display: block;
     background: lightgreen;
 }
 body {
     margin: 0;
-    border: 0;
+    xborder: 0;
+    border: 10px solid green;
     padding: 0;
 }
 .container {
