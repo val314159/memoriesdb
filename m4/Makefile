@@ -24,7 +24,7 @@ modelfiles::
 	make -C modelfiles
 
 honcho::
-	uv run honcho start
+	uv run --env-file=.env honcho start
 
 chat::
 	$U chat6.py TEST LAST

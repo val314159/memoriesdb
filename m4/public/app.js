@@ -3,7 +3,7 @@ const CH         = 'llm',
       CH_OUT     = CH + '-out',
       CH_IN      = CH + '-in',
       DB_IN      =    'db-in',
-      WS_BASE    = 'ws://localhost:5002/ws?c=',
+      WS_BASE    = `ws://${location.host}/ws?c=`,
       WS_TIMEOUT =  5 * 1000,
       WS_TIMEOUT2= 15 * 1000
 class WsApp {
