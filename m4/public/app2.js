@@ -5,8 +5,8 @@ const app = (new class App extends WsApp {
 
     displayText(s){
 	print(s)
-	GEBI("display").append(document.createTextNode(s))
-	GEBI("display").append(document.createElement('br'))}
+	GEBI("display").prepend(document.createTextNode(s))
+	GEBI("display").prepend(document.createElement('br'))}
 
     top(){window.scrollTo(0, 0)}
     bot(){window.scrollTo(0, document.body.scrollHeight)}
@@ -44,9 +44,10 @@ const app = (new class App extends WsApp {
     
     appendMessage(params){
 	const id = ++this.lastId
-	this.appendMsg(params.role, params.content)
-	this.appendMsg(  "thinking", '',  'thinking-'+id )
-	this.appendMsg( "assistant", '', 'assistant-'+id )}
+	this.prependMsg(params.role, params.content)
+	this.prependMsg(  "thinking", '',  'thinking-'+id )
+	this.prependMsg( "assistant", '', 'assistant-'+id )
+    }
 
     appendThoughts(s){
 	GEBI( "thinking-"+this.lastId).append(this.textNode(s))}
@@ -61,8 +62,9 @@ const app = (new class App extends WsApp {
 	this.uuid    = sp.get('uuid'   ) || params['uuid']
 	this.session = sp.get('session') || params['session']
 	print(`INITIALIZE ${this.uuid} ${this.session}`)
-	this.displayText(`INITIALIZE ${this.uuid} ${this.session}`)
-	this.displayText("REQUEST HISTORY")
+	//this.displayText(`INITIALIZE ${this.uuid} ${this.session}`)
+	//this.displayText("REQUEST HISTORY")
+	//this.bot()
 	this.pub('shortHistory', this.role, DB_IN)}
     
     on_pub(params){
@@ -98,11 +100,11 @@ const app = (new class App extends WsApp {
 	this.appendThoughts(params.thinking)}
 
     llm_speaking(params){
-	if(params.role=='user' || params.role=='system')
+	if(params.role=='user' || params.role=='system'){
 	    this.appendMessage(params)
-	else if(params.role=='assistant')
+	}else if(params.role=='assistant'){
 	    this.appendContents(params.content)
-	else
+	}else
 	    print("WARNING: WHATS THE ROLE HERE:", params)}
 
     llm_finished(params){
@@ -113,21 +115,26 @@ const app = (new class App extends WsApp {
 	params.results.forEach(x=>{
 	    print("X", x[0], " - ", x[1], '!')
 	    const html = `<a href=.?session=${x[0]}>${x[1]}</a>`
-	    GEBI("display").append(this.createElt("li", html))
+	    GEBI("display").prepend(this.createElt("li", html))
+	    this.bot()
 	})}
 
     db_shortHistory(params){
 	print("SHIST", _.uuid, params.results)
-	var buffer = [], lastRole = ''
+	var lastRole = ''
+	var buffer = []
 	params.results.forEach(x=>{
 	    if(lastRole != x.role){
-		this.prependMsg(lastRole, buffer.join(''))
+		this.appendMsg(lastRole, buffer.join(''))
+		
 		lastRole = x.role
 		buffer.length = 0
 	    }
 	    buffer.unshift(x.content)
 	})
-	this.prependMsg(lastRole, buffer.join(''))}
+	this.appendMsg(lastRole, buffer.join(''))
+	this.bot()
+    }
 
     db_newConvo(params){
 	print("NEWC", _.uuid, params.results)

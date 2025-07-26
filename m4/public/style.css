@@ -52,6 +52,9 @@ body {
 .display {
     flex: 1;
     overflow: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    bottom: 0;
 }
 button {
     flex-shrink: 1;
