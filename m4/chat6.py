@@ -42,7 +42,7 @@ def pub(ws, channel, content='', **kw):
                          content = content, **kw))
 
 
-CH = os.getenv('CH', 'llm')
+CH = os.getenv('CH', 'llm6')
     
 CH_IN  = os.getenv('CH_IN', CH+'-in')
 CH_OUT = os.getenv('CH_OUT',CH+'-out')

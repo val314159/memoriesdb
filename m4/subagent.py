@@ -1,7 +1,7 @@
 import os, json, websocket
 
 WS_BASE = "ws://localhost:5002/ws"
-NAME = os.getenv('NAME','llm')
+NAME = os.getenv('NAME','llm6')
 IN_CHANNEL  = NAME+'-in'
 OUT_CHANNEL = NAME+'-out'
 
