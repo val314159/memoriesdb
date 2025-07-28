@@ -7,7 +7,6 @@ Usage:
 Options:
     -h, --help     Show this screen and exit.
     -v, --version  Show this screen and exit.
-    --baud=<n>     Baudrate [default: 9600]
     <session_id>   session_id or LAST
     <uuid>          a user_id or TEST
 '''

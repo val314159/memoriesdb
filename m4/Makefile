@@ -27,7 +27,7 @@ honcho::
 	uv run --env-file=.env honcho start
 
 chat::
-	$U chat6.py TEST LAST
+	CH=llm6 $U chat6.py TEST LAST
 
 ipython:
 	$U .env ipython
