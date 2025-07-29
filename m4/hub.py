@@ -120,17 +120,34 @@ class Application(Bottle):
                  session = session_id,
                  wsid = wsid,
                  channels = channels)
-        
+
+            state = 0            
             print("Waiting...")
-            while channel:= ws.receive():
-                print("CHN", (channel,), "!")
-                raw = ws.receive()
-                print("Got1", (raw,), "!")
-                print("Got2", (ws, channel,))
-                _.Q.put((ws, channel, raw))
-                #_.pub_raw(ws, channel, raw)
+            while msg:= ws.receive():
+                print("MSG", (state,msg), "!")
+                if   state == 0  and  msg[0] in '[{':
+                    channel = json.loads(msg).get('params',{})['channel']
+                    _.Q.put((ws, channel, msg))
+                elif state == 0:
+                    channel = msg
+                    state = 1
+                elif state == 1:
+                    _.Q.put((ws, channel, msg))
+                    state = 0
+                else:
+                    raise Exception('Bad state', state)
+                
+            if 0:
                 print("Waiting...")
-                pass
+                while channel:= ws.receive():
+                    print("CHN", (channel,), "!")
+                    raw = ws.receive()
+                    print("Got1", (raw,), "!")
+                    print("Got2", (ws, channel,))
+                    _.Q.put((ws, channel, raw))
+                    #_.pub_raw(ws, channel, raw)
+                    print("Waiting...")
+                    pass
             
         finally:
             _.unsubscribe(ws, channels)
@@ -141,9 +158,6 @@ class Application(Bottle):
 
     def run(_, host='', port=5002):
 
-        # does this even do anything?
-        _.config['dns_lookups'] = False
-        
         _.Q = gevent.queue.Queue()
         gevent.spawn(_.drain)
         
