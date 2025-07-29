@@ -172,13 +172,16 @@ class Application(Bottle):
 app = app.push(Application())
 
 
-@app.route('/ws', method=['GET'])
+@app.route('/ws',  method=['GET'])
+@app.route('/ws/', method=['GET'])
 def _():
     if ws:= request.environ.get('wsgi.websocket'):
         return request.app.process(ws)
     raise Exception('no websocket')
 
+'''
 @app.post('/upload')
+@app.post('/upload/')
 def upload_file():
     add_cors_headers(response.headers,
                      request.headers.get('Origin'))
@@ -201,6 +204,7 @@ def upload_file():
     image_file.save(os.path.join('uploads', filename))
     assert 0==os.system('touch "' + os.path.join('uploads', filename+'.DUN"'))
     return {'message': f'File {filename} uploaded successfully'}
+'''
 
 @app.get('/')
 @app.get('<path:path>/')

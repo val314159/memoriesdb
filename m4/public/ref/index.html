@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="style.css">
+<container class="container" id="container">
+  <header class="header" id="header">
+    <button onclick="app.listConvos()">List Conversations</button>
+    <button onclick="app.newConvo()">New Conversation</button>
+    <button onclick="location='.'">Refresh</button>
+    <button onclick="app.top()">Top</button>
+    <button onclick="app.bot()">Bottom</button>
+  </header>
+  <div class="display" id="display">
+  </div>
+  <footer class="footer" id="footer">
+    <label>
+      <select id="role">
+	<option value="user"  >&nbsp;&nbsp;User:</option>
+	<option value="system">System:</option>
+      </select>
+    </label>
+    <textarea id="input" class="input" autofocus
+	      placeholder="Type Input Here..."></textarea>
+  </footer>
+</container>
+<script src="app.js"></script>
+<script src="app2.js"></script>
+
