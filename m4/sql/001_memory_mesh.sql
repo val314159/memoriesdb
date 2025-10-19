@@ -198,6 +198,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION normalize_memory_vector()
+RETURNS TRIGGER AS $$
+DECLARE
+    l2_norm FLOAT8;
+BEGIN
+    IF NEW.content_embedding IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    l2_norm := sqrt(NEW.content_embedding <#> NEW.content_embedding);
+
+    IF l2_norm = 0 THEN
+        RAISE EXCEPTION 'Cannot store zero-length vector in memories.content_embedding';
+    END IF;
+
+    NEW.content_embedding :=
+        (SELECT array_agg((val / l2_norm)::float4)
+         FROM unnest(NEW.content_embedding) AS val)::vector;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER memories_audit_trigger
 AFTER INSERT OR UPDATE OR DELETE ON memories
 FOR EACH ROW
@@ -220,6 +243,11 @@ CREATE TRIGGER queue_embedding_trigger
 AFTER INSERT OR UPDATE ON memories
 FOR EACH ROW
 EXECUTE FUNCTION queue_embedding();
+
+CREATE TRIGGER normalize_memories_vector
+BEFORE INSERT OR UPDATE OF content_embedding ON memories
+FOR EACH ROW
+EXECUTE FUNCTION normalize_memory_vector();
 
 CREATE OR REPLACE FUNCTION queue_vindexing()
 RETURNS TRIGGER AS $$

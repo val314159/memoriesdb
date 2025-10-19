@@ -335,7 +335,7 @@ def generate_embedding(text: str) -> List[float]:
         import math
         
         # Generate random vector
-        raw_vector = [random.uniform(-1, 1) for _ in range(1536)]
+        raw_vector = [random.uniform(-1, 1) for _ in range(1024)]
         
         # Normalize to unit length (L2 norm = 1)
         norm = math.sqrt(sum(x*x for x in raw_vector))

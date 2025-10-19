@@ -91,7 +91,7 @@ def weather_forecast(location: str) -> str:
   Returns:
     str: This is the weather forecast for the location.  if it's blank, that means we couldnt find the location.
   """
-  print("FIND THE WEATHER FOR", type(location), repr(location))
+  #print("FIND THE WEATHER FOR", type(location), repr(location))
   return "Sunny with a 10% chance of rain"
 
 
