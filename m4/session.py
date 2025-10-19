@@ -82,7 +82,7 @@ def _filter_tool_calls(_, done, message):
     for call in (message.tool_calls or []):
         name, arguments = call.function.name, call.function.arguments
         if name == 'respond_to_user':
-            _respond_to_user(_, done, message, arguments['message'], None)
+            _respond_to_user(_, done, message, arguments['message'], None, fake=True)
             continue
         yield dict( function=dict( name=name, arguments=arguments ) )
         pass
