@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Simple synchronous chat client for Ollama with tool support.
+"""Memory-aware chat client for Ollama with tool support.
 
 Usage:
-  simple_chat.py [--model MODEL] [--no-stream]
-  simple_chat.py (-h | --help | --version)
+  memory_chat.py [--model MODEL] [--no-stream]
+  memory_chat.py (-h | --help | --version)
 
 Options:
   --model MODEL    Ollama model to use [default: {default_model}].
@@ -12,8 +12,8 @@ Options:
   --version        Show version.
 
 This script keeps an in-memory conversation history, streams responses from
-Ollama, and executes tools defined in ``funcs2`` when requested. It bypasses
-all pub/sub and database persistence layers.
+Ollama, and executes tools defined in ``funcs2`` when requested. It is designed
+to be extended with the memories database subsystem for persistence.
 """
 
 from __future__ import annotations
@@ -29,14 +29,17 @@ from pathlib import Path
 import funcs2 as funcs
 from config import CHAT_MODEL
 
+VERSION = "1.0.1"
+
 TOOLS = getattr(funcs, "Tools", [])
+
 
 try:
     import readline  # type: ignore
 except ImportError:  # pragma: no cover - platform without readline
     readline = None  # type: ignore
 else:
-    HISTORY_FILE = Path.home() / ".simple_chat_history"
+    HISTORY_FILE = Path.home() / ".memory_chat_history"
     try:
         readline.read_history_file(HISTORY_FILE)
     except FileNotFoundError:
@@ -49,8 +52,11 @@ else:
         except FileNotFoundError:
             HISTORY_FILE.touch()
             readline.write_history_file(HISTORY_FILE)
+            pass
+        pass
 
     atexit.register(_save_history)
+    pass
 
 
 def call_tool(name: str, arguments: Dict[str, Any]) -> str:
@@ -64,6 +70,7 @@ def call_tool(name: str, arguments: Dict[str, Any]) -> str:
         return str(fn(**arguments))
     except Exception as exc:  # pragma: no cover - runtime diagnostic
         return f"[tool-error] {exc}"
+    pass
 
 
 def iter_chat(
@@ -127,9 +134,8 @@ def perform_turn(
                     synthetic_content = args.get("message", "")
                     assistant_fragments.append(synthetic_content)
                     prin(synthetic_content)
-                else:
-                    pending_tool_calls.append(tool_call)
-                    pass
+                    continue
+                pending_tool_calls.append(tool_call)
                 pass
             pass
         prin("\n")
@@ -139,6 +145,7 @@ def perform_turn(
                 "role": "assistant",
                 "content": "".join(assistant_fragments),
             })
+            pass
 
         if not pending_tool_calls:
             return
@@ -154,17 +161,22 @@ def perform_turn(
                 "name": name,
                 "content": result,
             })
+            pass
+        pass
+    pass
 
 
 def get_user_input(role: str = "user") -> str:
     while True:
         if ret:= input(f"{role}> ").strip():
-            return ret
+            break
+        pass
+    return ret
 
 
 def main(argv: List[str] | None = None) -> None:
     usage = __doc__.format(default_model=CHAT_MODEL)
-    args = docopt.docopt(usage, argv=argv, version="simple_chat 1.0.1")
+    args = docopt.docopt(usage, argv=argv, version=VERSION)
 
     model_name = args.get("--model")
     stream_mode = not args.get("--no-stream")
