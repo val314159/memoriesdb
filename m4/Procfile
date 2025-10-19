@@ -1,3 +1,3 @@
 hub:  sleep 0 ; NAME=hub ROOT=public/ref python3 -um hub  2>&1 | tee hub.log
-dbs6: sleep 1 ; NAME=db                  python3 -um dbs6 2>&1 | tee dbs.log
+#dbs6: sleep 1 ; NAME=db                  python3 -um dbs6 2>&1 | tee dbs.log
 llm6: sleep 2 ; NAME=llm6                python3 -um llm6 2>&1 | tee llm.log

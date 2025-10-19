@@ -16,15 +16,7 @@ class Convo(SubAgentBase):
         return
     def _pub(_, content, uuid, session, model='', toolset='',
              role='user', channel=OUT_CHANNEL, **kw):
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
-        print("XXXXXXXXXXXXXXX KW", kw)
+        print("PUB XXXXXXXXXXXXXXX KW", kw)
         key = ( uuid, session )
         model = model or _.models.get(key) or _.model
         _.models[key] = model

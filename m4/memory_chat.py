@@ -2,24 +2,26 @@
 """Memory-aware chat client for Ollama with tool support.
 
 Usage:
-  memory_chat.py [--model MODEL] [--no-stream]
+  memory_chat.py [--model MODEL] [--no-stream] [--create]
   memory_chat.py (-h | --help | --version)
 
 Options:
   --model MODEL    Ollama model to use [default: {default_model}].
   --no-stream      Disable streaming output (buffer full responses).
+  --create         Start a new session instead of continuing the last one.
   -h --help        Show this screen.
   --version        Show version.
 
-This script keeps an in-memory conversation history, streams responses from
-Ollama, and executes tools defined in ``funcs2`` when requested. It is designed
-to be extended with the memories database subsystem for persistence.
+This script resumes the most recent session from the memories database (or
+creates a new one with ``--create``), streams responses from Ollama, and
+executes tools defined in ``funcs2`` when requested.
 """
 
 from __future__ import annotations
 
+import os
 import sys
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional
 
 import ollama
 import docopt
@@ -27,11 +29,19 @@ import atexit
 from pathlib import Path
 
 import funcs2 as funcs
+import db_sync
+from db_ll_utils import set_current_user_id, get_current_user_id
+
 from config import CHAT_MODEL
 
 VERSION = "1.0.1"
 
 TOOLS = getattr(funcs, "Tools", [])
+
+USER_ID = os.getenv("USER_UUID")
+if USER_ID:
+    set_current_user_id(USER_ID)
+USER_ID = get_current_user_id()
 
 
 try:
@@ -92,31 +102,71 @@ def iter_chat(
     return chat if stream else [ chat ]
 
 
+def record_memory(
+    *,
+    session_id: str,
+    role: str,
+    content: str,
+    kind: str = "history",
+    metadata: Optional[Dict[str, Any]] = None,
+) -> str:
+    meta = dict(metadata or {})
+    meta.setdefault("role", role)
+    meta.setdefault("source", "memory_chat")
+
+    memory_id = db_sync.create_memory(
+        content=content or "",
+        user_id=USER_ID,
+        kind=kind,
+        metadata=meta,
+    )
+    db_sync.create_memory_edge(memory_id, session_id, "belongs_to")
+    return memory_id
+
+
+def delete_memory(memory_id: str) -> None:
+    """
+    Delete a memory by its ID.
+    """
+    db_sync.delete_memory(memory_id)
+
+
 def perform_turn(
     client: ollama.Client,
-    history: List[Dict[str, Any]],
     user_input: str,
     model_name: str,
     stream_mode: bool,
-) -> None:
+    *,
+    session_id: str,
+):
 
     prin = lambda s: print(s, end='', flush=True)
 
     assistant_fragments: List[str] = []
     pending_tool_calls: List[Dict[str, Any]] = []
 
-    history.append({"role": "user", "content": user_input})
+    mem_id = record_memory(
+        session_id=session_id,
+        role="user",
+        content=user_input,
+    )
 
     while True:
 
         assistant_fragments.clear()
         pending_tool_calls.clear()
 
+        history = db_sync.load_simplified_convo(session_id)
+
+        history = list(history)
+
+        print("HISTORY", list(history))
+
         try:
             chunks = iter_chat(client, history, model_name, stream_mode)
         except Exception as exc:
             print(f"[error] {exc}", file=sys.stderr)
-            history.pop() # AVOID DECOHERENCE
+            delete_memory(mem_id) # AVOID DECOHERENCE
             raise
 
         prin("asst> ")
@@ -141,11 +191,12 @@ def perform_turn(
         prin("\n")
 
         if assistant_fragments:
-            history.append({
-                "role": "assistant",
-                "content": "".join(assistant_fragments),
-            })
-            pass
+            record_memory(
+                session_id=session_id,
+                role="assistant",
+                content="".join(assistant_fragments),
+                metadata=dict(tool_calls=list(pending_tool_calls)),
+            )
 
         if not pending_tool_calls:
             return
@@ -156,14 +207,17 @@ def perform_turn(
             arguments = fn.get("arguments") or {}
             result = call_tool(name, arguments)
             print(f"tool[{name}]> {result}")
-            history.append({
-                "role": "tool",
-                "name": name,
-                "content": result,
-            })
+            record_memory(
+                session_id=session_id,
+                role="tool",
+                content=result,
+                kind="tool",
+                metadata=dict(tool_name=name, arguments=arguments),
+            )
             pass
         pass
-    pass
+
+    return
 
 
 def get_user_input(role: str = "user") -> str:
@@ -174,16 +228,31 @@ def get_user_input(role: str = "user") -> str:
     return ret
 
 
+def get_session_id(create_new: bool) -> str:
+    if create_new:
+        session_meta = {"source": "memory_chat"}
+        return db_sync.create_memory(
+            content="Memory chat session",
+            user_id=USER_ID,
+            kind="session",
+            metadata=session_meta,
+        )
+    if last := db_sync.get_last_session(USER_ID):
+        return str(last["id"])
+    raise RuntimeError("No last session found for user")
+
+
 def main(argv: List[str] | None = None) -> None:
     usage = __doc__.format(default_model=CHAT_MODEL)
     args = docopt.docopt(usage, argv=argv, version=VERSION)
 
     model_name = args.get("--model")
     stream_mode = not args.get("--no-stream")
-
-    history: List[Dict[str, Any]] = []
+    create_new = args.get("--create", False)
 
     client = ollama.Client()
+
+    session_id = get_session_id(create_new)
 
     print("Type messages to chat. Use /quit to exit.\n", flush=True)
 
@@ -202,7 +271,13 @@ def main(argv: List[str] | None = None) -> None:
             break
 
         try:
-            perform_turn(client, history, user_input, model_name, stream_mode)
+            perform_turn(
+                client,
+                user_input,
+                model_name,
+                stream_mode,
+                session_id=session_id,
+            )
         except Exception:
             raise
             continue # ignore error, keep on going

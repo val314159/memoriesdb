@@ -29,6 +29,9 @@ honcho::
 chat::
 	$U chat6.py TEST LAST
 
+mchat::
+	$U memory_chat.py
+
 ipython:
 	$U .env ipython
 

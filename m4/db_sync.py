@@ -157,6 +157,12 @@ def create_memory(
     VALUES (%s, %s, %s, %s, %s, %s)
     RETURNING id
     """
+
+    if not user_id:
+        user_id = get_current_user_id()
+    if not user_id:
+        raise ValueError("No current user set. Call set_current_user_id() first.")
+
     params = (
         content,
         kind,

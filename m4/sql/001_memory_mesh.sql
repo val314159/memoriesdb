@@ -235,6 +235,7 @@ CREATE OR REPLACE FUNCTION queue_embedding()
 RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO embedding_schedule (rec) VALUES (NEW.id);
+    PERFORM pg_notify('embedding_queue', NEW.id::text);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
