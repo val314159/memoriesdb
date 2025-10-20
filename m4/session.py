@@ -100,6 +100,7 @@ def chat_round(_, content, channel='', role='user', auto_tool=True):
     _append_user(_, content=content, role=role)
     while llm_messages:= ollama_chat(_):
         had_tool_calls = False
+        all_tool_calls = []
         for response in llm_messages:
             print("RESPONSE", response)
             done = response.done
@@ -108,6 +109,7 @@ def chat_round(_, content, channel='', role='user', auto_tool=True):
             role = message.role
             thinking = message.thinking
             tool_calls = list( _filter_tool_calls(_, message.tool_calls) )
+            all_tool_calls.extend(tool_calls)
             append_hist(_, content=content, role=role, kind='history', 
                         thinking=thinking, done=done, tool_calls=tool_calls)
             for tool_call in tool_calls:
@@ -123,6 +125,7 @@ def chat_round(_, content, channel='', role='user', auto_tool=True):
                     pass
                 print("TOOL RETURN", dict(content=content, role='tool', tool_name=name))
                 append_hist(_, content=content, role='tool', tool_name=name)
+                append_hist(_, content=content, role='tool', tool_name=name, kind='qqq')
                 pass
         print("....................", had_tool_calls)
         if not had_tool_calls:

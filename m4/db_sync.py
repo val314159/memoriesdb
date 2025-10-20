@@ -294,7 +294,7 @@ def simplify_convo(convo):
             if thinking:= msg.get('thinking'):
                 data['thinking'] = thinking
             yield data
-        elif kind == 'session':
+        elif kind in ['session', 'qqq']:
             pass
         else:
             NO_WAY
