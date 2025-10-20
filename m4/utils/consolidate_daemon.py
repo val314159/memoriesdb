@@ -7,7 +7,6 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterable, List, Optional
-
 import psycopg
 from psycopg.rows import dict_row
 
@@ -18,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 NOTIFY_CHANNEL = "embedding_queue"
 BATCH_SIZE = 64
-SLEEP_NO_WORK_SECONDS = 0.5
+
 
 @dataclass
 class PartialRow:
@@ -50,16 +49,29 @@ def listen_loop():
     logger.info("Starting consolidate daemon; listening on %s", NOTIFY_CHANNEL)
     with psycopg.connect(get_dsn(), autocommit=True) as listen_conn:
         listen_conn.execute(f"LISTEN {NOTIFY_CHANNEL};")
-        while True:
-            listen_conn.poll()
-            while listen_conn.notifies:
-                try:
-                    memory_id = listen_conn.notifies.pop(0).payload
-                    process_notification(memory_id)
-                except Exception:
-                    logger.exception("Error processing notification: %s", memory_id)
-            time.sleep(SLEEP_NO_WORK_SECONDS)
+        notifications = listen_conn.notifies()
+        for notify in notifications:
+            memory_id = notify.payload
+            try:
+                process_notification(memory_id)
+            except Exception:
+                logger.exception("Error processing notification: %s", memory_id)
 
+def select_next_jobs(conn):                
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            WITH next_jobs AS (
+                SELECT rec
+                FROM embedding_schedule
+                WHERE finished_at IS NULL
+                ORDER BY queued_at
+                LIMIT %s
+                FOR UPDATE SKIP LOCKED
+            )
+            SELECT rec FROM next_jobs
+            """, (BATCH_SIZE,))
+        return [row["rec"] for row in cur.fetchall()]
 
 def process_notification(memory_id: str) -> None:
     with pg_connection() as conn:
@@ -79,24 +91,10 @@ def process_notification(memory_id: str) -> None:
     while draining:
         with pg_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    WITH next_jobs AS (
-                        SELECT rec
-                        FROM embedding_schedule
-                        WHERE finished_at IS NULL
-                        ORDER BY queued_at
-                        LIMIT %s
-                        FOR UPDATE SKIP LOCKED
-                    )
-                    SELECT rec FROM next_jobs
-                    """,
-                    (BATCH_SIZE,),
-                )
-                jobs = [row["rec"] for row in cur.fetchall()]
+
+                jobs = select_next_jobs(conn)
                 if not jobs:
                     draining = False
-                    # conn.rollback()
                     break
 
                 processed_sessions: set[str] = set()
